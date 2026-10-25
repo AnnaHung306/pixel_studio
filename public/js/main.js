@@ -8,7 +8,7 @@ import * as D from './dialogs.js';
 import * as io from './io.js';
 import * as store from './storage.js';
 import { cloud, detectServer, onDocOpened, syncNow, loggedIn } from './cloud.js';
-import { h, popupMenu, prompt } from './dom.js';
+import { h, popupMenu, prompt, capture } from './dom.js';
 
 // ---------- open / autosave ----------
 let saveTimer = null;
@@ -178,7 +178,7 @@ function bindTopbar() {
   // swipe down to close sheet
   document.querySelectorAll('.sheet-handle').forEach((hd) => {
     let y0 = null;
-    hd.addEventListener('pointerdown', (e) => { y0 = e.clientY; hd.setPointerCapture(e.pointerId); });
+    hd.addEventListener('pointerdown', (e) => { y0 = e.clientY; capture(hd, e.pointerId); });
     hd.addEventListener('pointerup', (e) => { if (y0 !== null && e.clientY - y0 > 30) hd.parentElement.classList.remove('open'); y0 = null; });
   });
 }
@@ -203,6 +203,10 @@ function mainMenu(anchor) {
     { label: '水平翻轉（選取或整個 cel）', key: 'Shift+H', action: () => T.transformSelection('flipH') },
     { label: '垂直翻轉', key: 'Shift+V', action: () => T.transformSelection('flipV') },
     { label: '順時針旋轉 90°', action: () => T.transformSelection('rotCW') },
+    '-',
+    { header: '檢視' },
+    { label: '符合視窗', key: '0', action: fitView },
+    { label: '放大 / 縮小', key: '+ / −', action: () => zoomAt(2) },
     { label: '自訂格線…', action: gridDialog },
     '-',
     { label: '伺服器 · 雲端 · AI API…', action: () => D.serverDialog() },
@@ -346,6 +350,8 @@ async function boot() {
   if (keepColors) setUI(keepColors);
   detectServer().then(() => onDocOpened());
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
-  window.__pixelStudio = { app, T, A, io };
+  // ask the browser not to evict IndexedDB under storage pressure (Safari may otherwise clear site data)
+  navigator.storage?.persist?.().catch(() => {});
+  window.__pixelStudio = { app, T, A, io, D, P, store, cloud, setUI, undo, redo };
 }
 boot().catch((e) => { console.error(e); toast('啟動失敗：' + e.message); });
