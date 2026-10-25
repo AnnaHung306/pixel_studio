@@ -1,0 +1,233 @@
+// Document-level actions: layers, frames, tags, canvas size, palette.
+import { app, commit, emit, setUI, activeLayer, layerIndex, W, H, toast, uid, celKey } from './state.js';
+import { dropFloating, setCel } from './tools.js';
+import { reframe, compositeLayers, blendInto, createBuffer, rgbaToHex } from './core/raster.js';
+
+export function selectFrame(i) {
+  dropFloating();
+  const n = app.doc.meta.frames.length;
+  setUI({ frame: ((i % n) + n) % n });
+  emit('doc');
+}
+export function selectLayer(id) {
+  dropFloating();
+  setUI({ layerId: id });
+  emit('doc');
+}
+
+// ---------- layers ----------
+export function addLayer() {
+  dropFloating();
+  commit('新增圖層', () => {
+    const m = app.doc.meta;
+    const L = { id: uid('L'), name: `圖層 ${m.layers.length + 1}`, visible: true, locked: false, opacity: 1, blend: 'normal' };
+    m.layers.splice(layerIndex() + 1, 0, L);
+    app.ui.layerId = L.id;
+  });
+}
+export function duplicateLayer() {
+  dropFloating();
+  commit('複製圖層', () => {
+    const m = app.doc.meta;
+    const src = activeLayer();
+    const L = { ...src, id: uid('L'), name: src.name + ' 複本', locked: false };
+    m.layers.splice(layerIndex() + 1, 0, L);
+    for (const f of m.frames) { const b = app.doc.cels.get(celKey(src.id, f.id)); if (b) app.doc.cels.set(celKey(L.id, f.id), b); }
+    app.ui.layerId = L.id;
+  });
+}
+export function deleteLayer() {
+  const m = app.doc.meta;
+  if (m.layers.length <= 1) return toast('至少要保留一個圖層');
+  dropFloating();
+  commit('刪除圖層', () => {
+    const i = layerIndex();
+    const [L] = m.layers.splice(i, 1);
+    for (const f of m.frames) app.doc.cels.delete(celKey(L.id, f.id));
+    app.ui.layerId = m.layers[Math.max(0, i - 1)].id;
+  });
+}
+export function mergeDown() {
+  const m = app.doc.meta;
+  const i = layerIndex();
+  if (i <= 0) return toast('下方沒有圖層可合併');
+  dropFloating();
+  commit('向下合併', () => {
+    const top = m.layers[i], below = m.layers[i - 1];
+    for (const f of m.frames) {
+      const tb = app.doc.cels.get(celKey(top.id, f.id));
+      if (!tb || !top.visible) continue;
+      const bb = (app.doc.cels.get(celKey(below.id, f.id)) || createBuffer(W(), H())).slice();
+      blendInto(bb, tb, top.opacity, top.blend);
+      app.doc.cels.set(celKey(below.id, f.id), bb);
+    }
+    for (const f of m.frames) app.doc.cels.delete(celKey(top.id, f.id));
+    m.layers.splice(i, 1);
+    app.ui.layerId = below.id;
+  });
+}
+export function moveLayer(id, toIndex) {
+  const m = app.doc.meta;
+  const from = m.layers.findIndex((l) => l.id === id);
+  if (from < 0 || toIndex === from) return;
+  commit('調整圖層順序', () => {
+    const [L] = m.layers.splice(from, 1);
+    m.layers.splice(Math.max(0, Math.min(m.layers.length, toIndex)), 0, L);
+  });
+}
+export function updateLayer(id, patch, label = '圖層屬性') {
+  commit(label, () => Object.assign(app.doc.meta.layers.find((l) => l.id === id), patch));
+}
+
+// ---------- frames ----------
+function shiftTags(at, delta) {
+  for (const t of app.doc.meta.tags) {
+    if (delta > 0) { if (t.from >= at) t.from += delta; if (t.to >= at) t.to += delta; }
+    else { if (t.from > at) t.from--; if (t.to >= at) t.to--; }
+  }
+  app.doc.meta.tags = app.doc.meta.tags.filter((t) => t.to >= t.from && t.to >= 0);
+}
+export function addFrame(copy = false) {
+  dropFloating();
+  commit(copy ? '複製影格' : '新增影格', () => {
+    const m = app.doc.meta;
+    const cur = m.frames[app.ui.frame];
+    const F = { id: uid('F'), duration: cur.duration };
+    const at = app.ui.frame + 1;
+    m.frames.splice(at, 0, F);
+    shiftTags(at, 1);
+    if (copy) for (const L of m.layers) { const b = app.doc.cels.get(celKey(L.id, cur.id)); if (b) app.doc.cels.set(celKey(L.id, F.id), b); }
+    app.ui.frame = at;
+  });
+}
+export function deleteFrame() {
+  const m = app.doc.meta;
+  if (m.frames.length <= 1) return toast('至少要保留一個影格');
+  dropFloating();
+  commit('刪除影格', () => {
+    const i = app.ui.frame;
+    const [F] = m.frames.splice(i, 1);
+    for (const L of m.layers) app.doc.cels.delete(celKey(L.id, F.id));
+    shiftTags(i, -1);
+    app.ui.frame = Math.min(i, m.frames.length - 1);
+  });
+}
+export function moveFrame(delta) {
+  const m = app.doc.meta;
+  const i = app.ui.frame, j = i + delta;
+  if (j < 0 || j >= m.frames.length) return;
+  dropFloating();
+  commit('移動影格', () => {
+    [m.frames[i], m.frames[j]] = [m.frames[j], m.frames[i]];
+    app.ui.frame = j;
+  });
+}
+export function setFrameDuration(idxs, ms) {
+  ms = Math.max(10, Math.min(65535, Math.round(ms)));
+  commit('影格時長', () => { for (const i of idxs) app.doc.meta.frames[i].duration = ms; });
+}
+export function clearCel() {
+  dropFloating();
+  const k = celKey(activeLayer().id, app.doc.meta.frames[app.ui.frame].id);
+  if (!app.doc.cels.has(k)) return;
+  commit('清除 cel', () => app.doc.cels.delete(k));
+}
+
+// ---------- tags ----------
+export function saveTag(tag) {
+  commit(tag.id ? '編輯標籤' : '新增標籤', () => {
+    const tags = app.doc.meta.tags;
+    if (tag.id) Object.assign(tags.find((t) => t.id === tag.id), tag);
+    else tags.push({ ...tag, id: uid('T') });
+  });
+}
+export function deleteTag(id) {
+  commit('刪除標籤', () => { app.doc.meta.tags = app.doc.meta.tags.filter((t) => t.id !== id); });
+}
+
+// ---------- canvas ----------
+export function resizeCanvas(nw, nh, ax = 0.5, ay = 0.5) {
+  dropFloating();
+  const ow = W(), oh = H();
+  const ox = Math.round((nw - ow) * ax), oy = Math.round((nh - oh) * ay);
+  commit('畫布大小', () => {
+    for (const [k, b] of app.doc.cels) app.doc.cels.set(k, reframe(b, ow, oh, nw, nh, ox, oy));
+    for (const k of [...app.doc.cels.keys()]) setCel(k, app.doc.cels.get(k));
+    app.doc.meta.width = nw; app.doc.meta.height = nh;
+  });
+  app.selection = null;
+  emit('fit');
+}
+export function cropToSelection() {
+  const s = app.selection;
+  if (!s) return toast('請先建立選取範圍');
+  dropFloating();
+  const ow = W(), oh = H();
+  commit('裁切到選取範圍', () => {
+    for (const [k, b] of app.doc.cels) app.doc.cels.set(k, reframe(b, ow, oh, s.w, s.h, -s.x, -s.y));
+    for (const k of [...app.doc.cels.keys()]) setCel(k, app.doc.cels.get(k));
+    app.doc.meta.width = s.w; app.doc.meta.height = s.h;
+  });
+  app.selection = null;
+  emit('fit');
+}
+export function scaleSprite(factor) {
+  // nearest-neighbour scale of all cels (integer factors, or 0.5)
+  dropFloating();
+  const ow = W(), oh = H();
+  const nw = Math.max(1, Math.round(ow * factor)), nh = Math.max(1, Math.round(oh * factor));
+  if (nw > 2048 || nh > 2048) return toast('尺寸過大（上限 2048）');
+  commit(`縮放 ×${factor}`, () => {
+    for (const [k, b] of app.doc.cels) {
+      const out = createBuffer(nw, nh);
+      for (let y = 0; y < nh; y++) for (let x = 0; x < nw; x++) {
+        const si = (Math.min(oh - 1, Math.floor(y / factor)) * ow + Math.min(ow - 1, Math.floor(x / factor))) * 4;
+        out.set(b.subarray(si, si + 4), (y * nw + x) * 4);
+      }
+      app.doc.cels.set(k, out);
+    }
+    app.doc.meta.width = nw; app.doc.meta.height = nh;
+  });
+  emit('fit');
+}
+
+// ---------- palette ----------
+export function setPalette(colors, label = '調色盤') {
+  commit(label, () => { app.doc.meta.palette = colors; });
+}
+export function addPaletteColor(c) {
+  const hex = rgbaToHex(c);
+  if (app.doc.meta.palette.includes(hex)) return toast('調色盤已有此顏色');
+  setPalette([...app.doc.meta.palette, hex], '新增顏色');
+}
+export function removePaletteColor(hex) {
+  setPalette(app.doc.meta.palette.filter((c) => c !== hex), '移除顏色');
+}
+
+export function renameProject(name) {
+  commit('重新命名', () => { app.doc.meta.name = name; });
+}
+
+// ---------- references ----------
+export function addReference(name, dataUrl, w, h) {
+  commit('新增參考圖', () => {
+    const id = uid('R');
+    const scale = Math.min(1, W() / w, H() / h) || 1;
+    app.doc.meta.references.push({ id, name, opacity: 0.5, visible: true, x: 0, y: 0, scale: +scale.toFixed(4), pixelated: false });
+    app.doc.refs.set(id, dataUrl);
+  });
+}
+export function updateReference(id, patch, label = '參考圖') {
+  commit(label, () => Object.assign(app.doc.meta.references.find((r) => r.id === id), patch), { silent: false });
+}
+export function deleteReference(id) {
+  commit('刪除參考圖', () => {
+    app.doc.meta.references = app.doc.meta.references.filter((r) => r.id !== id);
+    app.doc.refs.delete(id);
+  });
+}
+
+export function compositeAll(fi) {
+  const m = app.doc.meta;
+  return compositeLayers(m.layers.map((L) => ({ visible: L.visible, opacity: L.opacity, blend: L.blend, buf: app.doc.cels.get(celKey(L.id, m.frames[fi].id)) })), m.width, m.height);
+}
