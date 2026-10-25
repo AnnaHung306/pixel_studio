@@ -1,16 +1,23 @@
 :root {
   --bg: #1b1b24; --bg2: #23232f; --bg3: #2c2c3b; --bg4: #383850; --fg: #e8e8f0; --fg2: #a9a9bd;
   --acc: #5b8cff; --acc2: #3d63c9; --danger: #e5484d; --ok: #3fb950; --line: #3a3a4e;
-  --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px); --safe-l: env(safe-area-inset-left, 0px); --safe-r: env(safe-area-inset-right, 0px);
   --tl-h: 210px; --side-w: 260px;
   font-family: system-ui, -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); overflow: hidden; overscroll-behavior: none; touch-action: none; font-size: 14px; }
+/* touch-action is intersected with every ancestor, so it must NOT be "none" on html/body:
+   that would make every scrollable panel (side panel, timeline, modals, toolbars) unscrollable by finger.
+   "manipulation" keeps scrolling but disables double-tap-to-zoom; only drawing surfaces use "none". */
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); overflow: hidden; overscroll-behavior: none; touch-action: manipulation; font-size: 14px; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+body { position: fixed; inset: 0; width: 100%; } /* no iOS rubber-band / page scroll */
 button, input, select, textarea { font: inherit; color: inherit; }
 input, textarea, select { touch-action: manipulation; }
 .hidden { display: none !important; }
-#app { display: flex; flex-direction: column; height: 100%; padding-top: var(--safe-t); }
+#app { display: flex; flex-direction: column; height: 100%; padding: var(--safe-t) var(--safe-r) 0 var(--safe-l); -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input, textarea, select, pre, code, .selectable { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
+#modal-root, #menu { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+#sidepanel, #tl-scroll, #toolbar, #optionsbar, #tl-controls, #history, #menu, .modal .body { touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
 
 /* ---------- top bar ---------- */
 #topbar { display: flex; align-items: center; gap: 4px; padding: 4px 6px; background: var(--bg2); border-bottom: 1px solid var(--line); min-height: 44px; }
@@ -53,7 +60,7 @@ input, textarea, select { touch-action: manipulation; }
 .swatch-fill { width: 100%; height: 100%; display: block; border-radius: 2px; }
 
 #stage { flex: 1; position: relative; overflow: hidden; background: #121218; min-width: 0; }
-#view { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; -webkit-user-select: none; user-select: none; }
 #coords { position: absolute; left: 8px; bottom: 6px; font-size: 12px; color: var(--fg2); pointer-events: none; text-shadow: 0 1px 2px #000; }
 #float-actions { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; gap: 4px; background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 4px; z-index: 5; flex-wrap: wrap; justify-content: center; max-width: 96%; }
 
@@ -71,6 +78,12 @@ input, textarea, select { touch-action: manipulation; }
 .row label { color: var(--fg2); font-size: 12px; }
 .row input[type=range] { flex: 1; min-width: 60px; }
 input[type=text], input[type=number], input[type=password], select, textarea { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; min-width: 0; }
+/* Safari / WebKit draws native selects as a light system control and ignores our background, which left
+   light text on a light box (unreadable). Draw our own. */
+select { -webkit-appearance: none; appearance: none; color: var(--fg); padding-right: 24px; min-width: 64px;
+  background: var(--bg) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23a9a9bd'/%3E%3C/svg%3E") no-repeat right 8px center / 10px 6px; }
+option, optgroup { background: var(--bg2); color: var(--fg); }
+input[type=number]::-webkit-inner-spin-button { opacity: .6; }
 input[type=number] { width: 70px; }
 input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--acc); }
 input[type=range] { accent-color: var(--acc); }
@@ -98,7 +111,8 @@ input[type=range] { accent-color: var(--acc); }
 #timeline { height: var(--tl-h); background: var(--bg2); border-top: 1px solid var(--line); display: flex; flex-direction: column; }
 #tl-controls { display: flex; gap: 4px; align-items: center; padding: 4px 6px; border-bottom: 1px solid var(--line); overflow-x: auto; white-space: nowrap; scrollbar-width: none; flex: none; }
 #tl-controls::-webkit-scrollbar { display: none; }
-#tl-controls select { padding: 3px; }
+#tl-controls select { padding: 3px 24px 3px 6px; }
+#tl-controls > *, #optionsbar > *, #optionsbar label > *, #optionsbar .grp > * { flex: none; } /* never squash controls; the bar scrolls instead */
 #tl-scroll { flex: 1; overflow: auto; position: relative; touch-action: pan-x pan-y; }
 #tl-grid { display: grid; position: relative; min-width: max-content; }
 .tl-corner, .tl-fh, .tl-lh, .tl-cel, .tl-tags, .tl-tagcorner { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -129,8 +143,8 @@ input[type=range] { accent-color: var(--acc); }
 .mi .k { color: var(--fg2); font-size: 12px; }
 .mi-sep { height: 1px; background: var(--line); margin: 4px 2px; }
 .mi-h { color: var(--fg2); font-size: 11px; padding: 6px 10px 2px; }
-#modal-root .backdrop { position: fixed; inset: 0; background: #0009; z-index: 60; display: flex; align-items: center; justify-content: center; padding: 12px; }
-.modal { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; width: min(560px, 100%); max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px #000a; }
+#modal-root .backdrop { position: fixed; inset: 0; background: #0009; z-index: 60; display: flex; align-items: center; justify-content: center; padding: calc(12px + var(--safe-t)) calc(12px + var(--safe-r)) calc(12px + var(--safe-b)) calc(12px + var(--safe-l)); }
+.modal { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; width: min(560px, 100%); max-height: 92vh; max-height: 92dvh; display: flex; flex-direction: column; box-shadow: 0 20px 60px #000a; }
 .modal.wide { width: min(860px, 100%); }
 .modal header { padding: 12px 16px; font-weight: 700; border-bottom: 1px solid var(--line); display: flex; align-items: center; }
 .modal header .x { margin-left: auto; }
@@ -166,7 +180,7 @@ pre { padding: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-a
 .toast { background: #000d; color: #fff; padding: 8px 14px; border-radius: 10px; font-size: 13px; animation: tin .2s; max-width: 90vw; }
 .toast.ai { background: #16402a; border: 1px solid var(--ok); }
 @keyframes tin { from { opacity: 0; transform: translateY(8px); } }
-.sheet-handle { display: none; }
+.sheet-handle { display: none; touch-action: none; }
 .show-sm { display: none !important; }
 
 /* ---------- phone layout: panels become bottom sheets ---------- */
@@ -177,12 +191,21 @@ pre { padding: 8px; overflow-x: auto; white-space: pre-wrap; word-break: break-a
   #toolbar { order: 2; flex-direction: row; border-right: 0; border-top: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; padding: 4px 6px calc(4px + var(--safe-b)); }
   #toolbar .colors { margin: 0 0 0 6px; width: 46px; height: 42px; }
   #stage { order: 1; }
-  .sheet { position: fixed !important; left: 0; right: 0; bottom: 0; z-index: 40; max-height: 70vh; width: auto !important; border: 1px solid var(--line); border-radius: 16px 16px 0 0; transform: translateY(105%); transition: transform .22s ease; box-shadow: 0 -10px 30px #0008; padding-bottom: var(--safe-b); }
+  .sheet { position: fixed !important; left: var(--safe-l); right: var(--safe-r); bottom: 0; z-index: 40; max-height: 70vh; max-height: 70dvh; width: auto !important; border: 1px solid var(--line); border-radius: 16px 16px 0 0; transform: translateY(105%); transition: transform .22s ease; box-shadow: 0 -10px 30px #0008; padding-bottom: var(--safe-b); }
   .sheet.open { transform: translateY(0); }
-  #timeline { height: 50vh; }
-  .sheet-handle { display: block; width: 44px; height: 5px; border-radius: 3px; background: var(--bg4); margin: 6px auto 2px; flex: none; }
-  #doc-title { max-width: 30vw; }
+  #timeline { height: 50vh; height: 50dvh; }
+  .sheet-handle { display: block; width: 64px; height: 22px; padding: 8px 10px; border-radius: 12px; background: var(--bg4); background-clip: content-box; margin: 0 auto; flex: none; cursor: grab; }
+  #topbar { gap: 2px; padding: 4px; }
+  #topbar .ib { min-width: 34px; padding: 0 4px; }
+  #doc-title { max-width: 34vw; min-width: 40px; flex: 0 1 auto; padding: 4px; }
   .tl-lh { width: 150px; }
+  #float-actions { top: 4px; }
+  /* phone: show every timeline / layer control at once instead of a hidden horizontal scroll */
+  #tl-controls { flex-wrap: wrap; white-space: normal; overflow-x: visible; row-gap: 2px; }
+}
+/* very narrow phones (iPhone portrait): drop the zoom-% label (pinch / menu still available) so every button fits */
+@media (max-width: 430px) {
+  #btn-zoom { display: none; }
 }
 @media (min-width: 761px) and (max-width: 1050px) {
   :root { --side-w: 220px; }
