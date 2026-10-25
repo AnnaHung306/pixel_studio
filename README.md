@@ -273,11 +273,27 @@ claude mcp add --transport http pixel-studio http://localhost:8787/mcp --header 
 
 ## 測試
 
+完整的使用說明書（繁體中文、含截圖）：[`docs/使用說明書.md`](docs/使用說明書.md)。
+
 ```bash
 npm run smoke
 ```
 
 會在暫存資料夾啟動伺服器，測試：擁有者登入、建立金鑰、專案存取限制、所有繪圖工具、DELETE → 403、清空 cel → 403、鎖定圖層 → 423、匯出 PNG 的透明度、MCP initialize / tools/list / tools/call（含圖片）、活動紀錄還原、速率限制、撤銷金鑰、OpenAPI 與文件頁。
+
+### 瀏覽器端對端測試（iPad / iPhone / 桌面）
+
+```bash
+npx playwright install --with-deps webkit chromium   # 第一次
+npm run e2e                                          # build + 全部裝置 × （伺服器 + 純靜態 dist/）
+npm run e2e -- --profile=ipad-pro-11-landscape --target=static --suite=draw,select
+npm run e2e -- --list                                # 列出裝置設定與測試組
+npm run e2e -- --shots                               # 同時更新 docs/screenshots/
+```
+
+`scripts/e2e.js` 用 Playwright **WebKit（Safari 的引擎）** 模擬 iPad Pro 11、iPad（第 7 代）、iPad mini（橫 / 直）、iPhone 14（直 / 橫），以及 Chromium 1920×1080 桌面，透過觸控 / 筆 / 滑鼠 pointer 事件實際操作 UI：所有工具、選取、調色盤匯入匯出、圖層、時間軸 / 標籤 / 播放、洋蔥皮、縮放捏合、雙指 / 三指復原重做、歷史面板、參考圖、畫布大小、所有匯出格式（解碼驗證 PNG / GIF / APNG / ZIP / 精靈圖 JSON / .pxs）、匯入、IndexedDB 自動儲存、PWA manifest / Service Worker / 離線、雲端登入 / 同步、API 金鑰 UI、AI REST 與 MCP 繪圖即時出現在畫布、活動紀錄還原、禁止刪除；並檢查版面（按鈕是否超出畫面、底部面板、safe-area、touch-action、頁面不捲動不縮放）與所有 console / 頁面 / 網路錯誤。結果寫在 `test-results/e2e/*.json`。
+
+使用說明書 PDF：`node scripts/manual-pdf.js [輸出.pdf]`（需要 pandoc 與 Noto Sans CJK 字型）。
 
 ## 專案結構
 
@@ -300,7 +316,10 @@ pixel-studio/
 │  ├─ ops.js               AI 工具定義（REST / MCP / OpenAPI 共用，唯一真實來源）
 │  ├─ mcp.js, openapi.js, store.js, png.js
 ├─ scripts/build.js        public → dist、產生圖示、Service Worker 版本
-├─ scripts/smoke.js        冒煙測試
+├─ scripts/smoke.js        伺服器冒煙測試（51 項）
+├─ scripts/e2e.js          瀏覽器端對端測試（WebKit iPad / iPhone + Chromium 桌面）
+├─ scripts/manual-pdf.js   使用說明書 → PDF
+├─ docs/                   使用說明書.md、QA測試報告.md、screenshots/
 └─ Dockerfile              選用
 ```
 
@@ -319,3 +338,6 @@ docker run -p 8787:8787 -e OWNER_PASSWORD=你的密碼 -v pixel-data:/data pixel
 - 同時在多個裝置編輯同一個 cel 時採「最後寫入者勝」；不同 cel 不會互相覆蓋。
 - 沒有 Apple Pencil 壓力感應（依需求刻意不做）；也沒有連結 cel（linked cels）、切片（slices）、tilemap。
 - 單一擁有者帳號，沒有多使用者權限。
+- iPhone / iPad 的 Safari 可能清除超過 7 天未開啟網站的資料：建議「加入主畫面」、定期下載 .pxs 或使用伺服器同步。
+- iOS 上精靈圖的 PNG + JSON 會自動打包成一個 ZIP（Safari 一次點擊只允許一個下載）；從主畫面 App 匯出時改用分享面板。
+- 觸控裝置無法雙擊重新命名圖層，請用 ⚙ 圖層屬性。
