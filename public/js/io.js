@@ -3,7 +3,7 @@ import { app, W, H, commit, uid, celKey, toast } from './state.js';
 import { compositeAll } from './actions.js';
 import { scaleNearest, createBuffer, reframe, isEmpty } from './core/raster.js';
 import { encodeGIF, encodeAPNG, encodePNG, makeZip, decodeGIF } from './formats.js';
-import { download, readAs } from './dom.js';
+import { download, readAs, isIOS } from './dom.js';
 import { docToJSON, docFromJSON } from './storage.js';
 import { dropFloating } from './tools.js';
 
@@ -79,7 +79,8 @@ export async function exportSheet(scale, idxs, { layout = 'horizontal', columns 
   };
   const png = await bufToPngBlob(scaleNearest(sheet, SW, SH, scale), SW * scale, SH * scale);
   const jsonBlob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' });
-  if (zip) download(makeZip([{ name: imgName, data: await bytes(png) }, { name: `${safeName()}-sheet.json`, data: await bytes(jsonBlob) }]), `${safeName()}-sheet.zip`);
+  // iOS Safari only allows one download per tap, so the PNG + JSON pair is always delivered as one ZIP there.
+  if (zip || isIOS) download(makeZip([{ name: imgName, data: await bytes(png) }, { name: `${safeName()}-sheet.json`, data: await bytes(jsonBlob) }]), `${safeName()}-sheet.zip`);
   else {
     download(png, imgName);
     setTimeout(() => download(jsonBlob, `${safeName()}-sheet.json`), 400);
