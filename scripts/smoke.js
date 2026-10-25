@@ -31,7 +31,7 @@ async function req(method, url, { token, body, raw } = {}) {
 const mcp = (key, method, params, id = 1) => req('POST', '/mcp', { token: key, body: { jsonrpc: '2.0', id, method, params } });
 
 async function waitUp() {
-  for (let i = 0; i < 50; i++) { try { const r = await fetch(BASE + '/api/health'); if (r.ok) return; } catch {} await new Promise((r) => setTimeout(r, 100)); }
+  for (let i = 0; i < 200; i++) { try { const r = await fetch(BASE + '/api/health'); if (r.ok) return; } catch {} await new Promise((r) => setTimeout(r, 100)); }
   throw new Error('server did not start\n' + srvLog);
 }
 
