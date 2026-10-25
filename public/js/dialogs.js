@@ -77,13 +77,13 @@ export function canvasSizeDialog() {
     for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) anchor.append(h('button', { class: ax === i / 2 && ay === j / 2 ? 'on' : '', onclick: () => { ax = i / 2; ay = j / 2; drawAnchor(); } }));
   };
   drawAnchor();
-  modal({
+  const dlg = modal({
     title: '畫布大小 / 縮放',
     body: h('div', {},
       h('div', { class: 'row' }, h('label', {}, '寬'), wi, h('label', {}, '高'), hi),
       h('div', { class: 'field' }, h('span', {}, '錨點（內容對齊位置）'), anchor),
       h('div', { class: 'field' }, h('span', {}, '或縮放整個精靈（最近鄰，不模糊）'),
-        h('div', { class: 'presets' }, [0.5, 2, 3, 4].map((f) => h('button', { class: 'btn', onclick: () => { A.scaleSprite(f); document.querySelector('#modal-root .backdrop')?.remove(); } }, `×${f}`)))),
+        h('div', { class: 'presets' }, [0.5, 2, 3, 4].map((f) => h('button', { class: 'btn', onclick: () => { A.scaleSprite(f); dlg.close(null); } }, `×${f}`)))),
       h('p', { class: 'small' }, '提示：選取範圍後可用「裁切到選取範圍」。')),
     buttons: [{ label: '取消', value: null }, { label: '套用', class: 'primary', onClick: () => A.resizeCanvas(Math.max(1, Math.min(2048, +wi.value | 0)), Math.max(1, Math.min(2048, +hi.value | 0)), ax, ay) }],
   });
