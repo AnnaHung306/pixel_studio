@@ -4,16 +4,22 @@
   "description": "Pixel Studio — 觸控優先的像素繪圖 / 動畫 PWA，附可選的本機伺服器（AI REST API + MCP、即時同步）",
   "type": "module",
   "private": true,
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "build": "node scripts/build.js",
     "start": "node server/index.js",
     "dev": "node scripts/build.js && node server/index.js",
-    "smoke": "node scripts/smoke.js"
+    "smoke": "node scripts/smoke.js",
+    "e2e": "node scripts/build.js && node scripts/e2e.js"
   },
   "dependencies": {
     "express": "^4.21.2",
     "pngjs": "^7.0.0",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.1"
   }
 }
