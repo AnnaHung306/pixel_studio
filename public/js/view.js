@@ -2,6 +2,7 @@
 import { app, on, emit, setUI, undo, redo, getCelBuf, W, H } from './state.js';
 import * as tools from './tools.js';
 import { compositeLayers, hexToRgba } from './core/raster.js';
+import { capture } from './dom.js';
 
 let canvas, ctx, stage;
 let dpr = 1;
@@ -258,15 +259,15 @@ function bindInput() {
   canvas.addEventListener('pointercancel', onCancel);
   canvas.addEventListener('pointerleave', () => { hover = null; needsRender = true; document.getElementById('coords').textContent = ''; });
   canvas.addEventListener('wheel', onWheel, { passive: false });
-  // Safari trackpad pinch
-  canvas.addEventListener('gesturestart', (e) => e.preventDefault());
+  // Safari: block the page-level pinch zoom / gesture events everywhere (iOS ignores user-scalable=no)
+  for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
   window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !isTyping(e)) { spaceDown = true; canvas.style.cursor = 'grab'; e.preventDefault(); } });
   window.addEventListener('keyup', (e) => { if (e.code === 'Space') { spaceDown = false; canvas.style.cursor = ''; } });
 }
 export const isTyping = (e) => /^(INPUT|TEXTAREA|SELECT)$/.test(e.target?.tagName) && !['range', 'checkbox', 'radio', 'button'].includes(e.target.type);
 
 function onDown(e) {
-  canvas.setPointerCapture(e.pointerId);
+  capture(canvas, e.pointerId);
   const p = local(e);
   pointers.set(e.pointerId, { ...p, type: e.pointerType, startX: p.sx, startY: p.sy, t: Date.now() });
   if (e.pointerType === 'pen') { if (!penSeen) { penSeen = true; if (!app.ui.penOnly) { setUI({ penOnly: true }); emit('toast', '偵測到觸控筆：已啟用防誤觸（手指只能平移縮放）'); } } }
@@ -330,6 +331,8 @@ function onUp(e) {
   const ptr = pointers.get(e.pointerId);
   pointers.delete(e.pointerId);
   const p = local(e);
+  // fingers / pens do not hover: don't leave a stale brush cursor behind after lifting
+  if (e.pointerType !== 'mouse') { hover = null; needsRender = true; }
   if (mode === 'draw') {
     tools.up(screenToDoc(p.sx, p.sy), info(e));
     app.busy = false;
