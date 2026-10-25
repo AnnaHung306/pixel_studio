@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1b1b24">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Pixel Studio">
+  <meta name="description" content="觸控優先的像素繪圖與動畫工具">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/app.css">
+  <title>Pixel Studio</title>
+</head>
+<body>
+  <div id="app">
+    <header id="topbar">
+      <button class="ib" id="btn-menu" title="選單">☰</button>
+      <div id="doc-title" title="點擊重新命名">Pixel Studio</div>
+      <div class="spacer"></div>
+      <button class="ib" id="btn-undo" title="復原 (Ctrl+Z)">↶</button>
+      <button class="ib" id="btn-redo" title="重做 (Ctrl+Y)">↷</button>
+      <div class="sep hide-sm"></div>
+      <button class="ib hide-sm" id="btn-zoom-out" title="縮小 (-)">−</button>
+      <button class="tb" id="btn-zoom" title="符合視窗 (0)">100%</button>
+      <button class="ib hide-sm" id="btn-zoom-in" title="放大 (+)">＋</button>
+      <button class="ib" id="btn-grid" title="像素格線 (Ctrl+')">#</button>
+      <div class="sep hide-sm"></div>
+      <button class="ib show-sm" id="btn-sheet-color" title="顏色 / 調色盤"><span id="mini-color"></span></button>
+      <button class="ib show-sm" id="btn-sheet-timeline" title="圖層 / 時間軸">🎞</button>
+      <button class="ib show-sm" id="btn-sheet-side" title="更多面板">⋯</button>
+      <button class="ib" id="btn-cloud" title="伺服器 / AI 設定"><span id="cloud-dot" class="dot off"></span></button>
+    </header>
+
+    <div id="optionsbar"></div>
+
+    <div id="main">
+      <nav id="toolbar"></nav>
+      <div id="stage">
+        <canvas id="view"></canvas>
+        <div id="coords"></div>
+        <div id="float-actions" class="hidden"></div>
+      </div>
+      <aside id="sidepanel" class="sheet">
+        <div class="sheet-handle"></div>
+        <section class="panel" id="panel-preview">
+          <h3>預覽</h3>
+          <canvas id="preview" class="checker"></canvas>
+        </section>
+        <section class="panel" id="panel-color">
+          <h3>顏色</h3>
+          <div id="color-editor"></div>
+        </section>
+        <section class="panel" id="panel-palette">
+          <h3>調色盤 <span class="h-actions" id="palette-actions"></span></h3>
+          <div id="palette"></div>
+        </section>
+        <section class="panel" id="panel-onion">
+          <h3>洋蔥皮</h3>
+          <div id="onion"></div>
+        </section>
+        <section class="panel" id="panel-refs">
+          <h3>參考圖 <span class="h-actions"><button class="sb" id="btn-add-ref">＋ 匯入</button></span></h3>
+          <div id="refs"></div>
+        </section>
+        <section class="panel" id="panel-history">
+          <h3>歷史紀錄</h3>
+          <div id="history"></div>
+        </section>
+      </aside>
+    </div>
+
+    <section id="timeline" class="sheet">
+      <div class="sheet-handle"></div>
+      <div id="tl-controls"></div>
+      <div id="tl-scroll"><div id="tl-grid"></div></div>
+    </section>
+  </div>
+
+  <div id="menu" class="hidden"></div>
+  <div id="modal-root"></div>
+  <div id="toast"></div>
+  <input type="file" id="file-input" class="hidden">
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
