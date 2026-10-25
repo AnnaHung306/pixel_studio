@@ -25,6 +25,8 @@ const owner = store.getOwnerPassword();
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', true);
+// marker header: lets the PWA tell this server apart from a plain static host without probing /api (no 404 noise)
+app.use((_req, res, next) => { res.set('X-Pixel-Studio', 'server'); next(); });
 app.use(express.json({ limit: '80mb' }));
 
 // CORS for the AI API / MCP (agents may call from other origins)
