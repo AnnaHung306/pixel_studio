@@ -11,6 +11,11 @@ export const cloud = {
 
 export async function detectServer() {
   try {
+    if (navigator.onLine === false) throw new Error('offline'); // no request at all → no network error logged
+    // On a plain static host (dist/ only) there is no /api: probe the app shell with HEAD first and look for the
+    // server's marker header, so static hosting never logs a 404 for api/health.
+    const head = await fetch('./', { method: 'HEAD', cache: 'no-store' });
+    if (head.headers.get('x-pixel-studio') !== 'server') throw new Error('static host');
     const r = await fetch('api/health', { cache: 'no-store' });
     const j = await r.json();
     cloud.available = j.app === 'pixel-studio';
