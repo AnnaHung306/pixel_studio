@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'pwa', 'cloud', 'keyboard', 'diag'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1154,6 +1154,59 @@ async function runProfile(name, target, base) {
     await settle(300);
     ok(await page.locator('#about-storage').count() === 1, 'about shows storage usage', await E(() => document.getElementById('about-storage')?.textContent));
     await closeModals();
+  };
+
+  S.notices = async () => {
+    const bar = page.locator('#notice-bar');
+    const ios = prof.browser === 'webkit';
+    const force = async () => { await E(async () => { window.__forceNotices = true; await window.__pixelStudio.notices.check(); }); await raf(); };
+    const kind = () => E(() => document.getElementById('notice-bar').dataset.kind || '');
+    ok(!(await bar.isVisible()), 'automated browsers get no notices unless forced (keeps other suites stable)');
+    const DAY = 86400000;
+    await E(async (D) => { const st = window.__pixelStudio.store; await st.setSetting('installNoticeSnooze', 0); await st.setSetting('backupNoticeSnooze', 0); await st.setSetting('lastBackupAt', Date.now()); await st.setSetting('firstUseAt', Date.now() - 30 * D); }, DAY);
+    await force();
+    if (ios) {
+      ok(await bar.isVisible() && await kind() === 'install', 'iOS Safari tab → “add to Home Screen” notice', await kind());
+      ok((await bar.textContent()).includes('7 天'), 'notice explains the 7-day Safari clearing risk');
+      if (prof.touch) {
+        const sizes = await E(() => [...document.querySelectorAll('#notice-bar button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
+        ok(sizes.length === 2 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'notice buttons ≥ 44pt', JSON.stringify(sizes));
+      }
+      await layoutOk('install notice');
+      await tap('#notice-bar [data-act=how]');
+      ok(await page.locator('#modal-root .modal', { hasText: '加入主畫面' }).count() === 1 && (await page.locator('#modal-root .modal').last().textContent()).includes('以 Web App 開啟'), '“如何加入” shows the iPadOS 26 steps');
+      await modalBtn('知道了');
+      await tap('#notice-bar [data-act=later]');
+      ok(!(await bar.isVisible()), '“稍後” hides the notice');
+      await page.reload({ waitUntil: 'load' });
+      await page.waitForFunction(() => window.__pixelStudio?.app?.doc, null, { timeout: 15000 });
+      await force();
+      ok(!(await bar.isVisible()), 'snooze persists across reload (7 days)');
+    } else {
+      ok(!(await bar.isVisible()), 'no install notice outside iOS');
+    }
+    // backup reminder (install notice snoozed / not applicable)
+    await E(async (D) => { const st = window.__pixelStudio.store; await st.setSetting('installNoticeSnooze', Date.now()); await st.setSetting('lastBackupAt', Date.now() - 8 * D); }, DAY);
+    await force();
+    ok(await bar.isVisible() && await kind() === 'backup', '8 days without backup → backup reminder', await kind());
+    const d = await waitDownloads(1, () => tap('#notice-bar [data-act=backup]'));
+    ok(d[0]?.name.endsWith('.pxs'), 'reminder “下載備份” downloads a .pxs');
+    await page.waitForFunction(() => document.getElementById('notice-bar').classList.contains('hidden'), null, { timeout: 4000 }).catch(() => {});
+    ok(!(await bar.isVisible()), 'reminder disappears after backing up');
+    ok(await E(async () => Date.now() - (await window.__pixelStudio.store.getSetting('lastBackupAt', 0)) < 60000), 'backup time recorded');
+    await menu('關於');
+    await settle(300);
+    ok(!(await E(() => document.getElementById('about-backup')?.textContent || '')).includes('尚未'), 'about shows last backup time');
+    await closeModals();
+    await menu('加入主畫面');
+    ok(await page.locator('#modal-root .modal', { hasText: '主畫面 App 與 Safari 分頁的資料是分開的' }).count() === 1, 'menu → 加入主畫面 explains separate storage');
+    await closeModals();
+    // IndexedDB connection dropped by the browser → next save reopens it
+    await E(() => window.__pixelStudio.store._dropConnectionForTest());
+    await setPrimary([4, 5, 6, 255]);
+    await stroke([[1, 1], [1, 1]]);
+    ok(await page.waitForFunction(() => document.getElementById('doc-title').dataset.save === 'saved', null, { timeout: 6000 }).then(() => true, () => false), 'autosave recovers from a closed IndexedDB connection', await E(() => document.getElementById('doc-title').dataset.save));
+    await E(() => { window.__forceNotices = false; window.__pixelStudio.notices.check(); });
   };
 
   S.pwa = async () => {

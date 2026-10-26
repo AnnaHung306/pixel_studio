@@ -11,6 +11,7 @@ import { cloud, detectServer, onDocOpened, syncNow, loggedIn } from './cloud.js'
 import { h, popupMenu, prompt, capture, isIOS, a11yLabel } from './dom.js';
 import { APP_VERSION } from './version.js';
 import * as diag from './diag.js';
+import * as notices from './notices.js';
 
 // ---------- open / autosave (state machine: saved → dirty → saving → saved | error) ----------
 // Every change bumps `rev`; a save records the rev it wrote, so a change made while saving is never lost.
@@ -79,6 +80,11 @@ function renderSaveBanner() {
   const text = why + '請先下載備份。';
   if (msg.textContent !== text) msg.textContent = text;
   b.classList.remove('hidden');
+}
+function buildNoticeBar() {
+  const b = h('div', { id: 'notice-bar', class: 'hidden', role: 'status' });
+  document.getElementById('app').insertBefore(b, document.getElementById('optionsbar'));
+  notices.init({ backup: () => io.exportPxs() });
 }
 function buildSaveBanner() {
   const b = h('div', { id: 'save-banner', class: 'hidden', role: 'alert' },
@@ -291,6 +297,7 @@ function mainMenu(anchor) {
     '-',
     { label: '伺服器 · 雲端 · AI API…', action: () => D.serverDialog() },
     { label: '快捷鍵說明', action: D.shortcutsDialog },
+    { label: '加入主畫面（離線、較不會被清除）…', action: notices.installHelp },
     { label: '診斷資訊（回報問題用）…', action: diagDialog },
     { label: '關於 Pixel Studio', action: about },
   ]);
@@ -321,11 +328,14 @@ async function about() {
   const storeLine = si.usage != null && si.quota ? `儲存空間：已用 ${fmtMB(si.usage)} / 可用 ${fmtMB(si.quota)}` : '儲存空間：瀏覽器未提供';
   const persistLine = si.persisted == null ? '持久儲存：不支援' : si.persisted ? '持久儲存：已啟用（瀏覽器不會自動清除）' : '持久儲存：未啟用（建議加入主畫面並定期下載備份）';
   const lastLine = save.lastSaved ? `最後儲存：${new Date(save.lastSaved).toLocaleTimeString()}` : '最後儲存：—';
+  const lb = await notices.backupInfo();
+  const backupLine = `最後備份（.pxs）：${lb ? new Date(lb).toLocaleString() : '尚未備份'}`;
+  const modeLine = `執行方式：${notices.isStandalone() ? '主畫面 App' : '瀏覽器分頁'}`;
   import('./dom.js').then(({ modal }) => modal({
     title: '關於 Pixel Studio',
     body: h('div', {}, h('p', {}, `Pixel Studio ${APP_VERSION} — 觸控優先的像素繪圖與動畫工具（PWA）。`),
       h('p', { class: 'small' }, `模式：${cloud.available ? (loggedIn() ? '已連線伺服器' : '偵測到伺服器（未登入）') : '單機（資料存在此瀏覽器）'}`),
-      h('p', { class: 'small', id: 'about-storage' }, storeLine), h('p', { class: 'small' }, persistLine), h('p', { class: 'small' }, lastLine),
+      h('p', { class: 'small', id: 'about-storage' }, storeLine), h('p', { class: 'small' }, persistLine), h('p', { class: 'small' }, lastLine), h('p', { class: 'small', id: 'about-backup' }, backupLine), h('p', { class: 'small' }, modeLine),
       h('p', { class: 'small' }, '可「加入主畫面」離線使用（需 HTTPS 或 localhost 才能離線快取）。')),
   }));
 }
@@ -469,6 +479,7 @@ async function boot() {
   document.getElementById('toolbar').setAttribute('role', 'toolbar');
   document.getElementById('toolbar').setAttribute('aria-label', '繪圖工具');
   buildSaveBanner();
+  buildNoticeBar();
   initView();
   bindTopbar();
   window.addEventListener('keydown', onKey);
@@ -493,6 +504,7 @@ async function boot() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   // ask the browser not to evict IndexedDB under storage pressure (Safari may otherwise clear site data)
   navigator.storage?.persist?.().catch(() => {});
-  window.__pixelStudio = { app, T, A, io, D, P, store, cloud, setUI, undo, redo, save, saveNow, diag };
+  notices.check().catch((e) => diag.record('warn', 'notices: ' + e.message));
+  window.__pixelStudio = { app, T, A, io, D, P, store, cloud, setUI, undo, redo, save, saveNow, diag, notices };
 }
 boot().catch((e) => { console.error(e); diag.record('error', '啟動失敗：' + e.message, e.stack); toast('啟動失敗：' + e.message); });

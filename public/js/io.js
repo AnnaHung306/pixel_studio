@@ -107,6 +107,7 @@ export async function exportAPNG(scale, idxs, loopMode = 'loop') {
 export function exportPxs() {
   dropFloating();
   download(new Blob([JSON.stringify(docToJSON(app.doc))], { type: 'application/json' }), `${safeName()}.pxs`);
+  import('./notices.js').then((n) => n.markBackup()).catch(() => {});
 }
 
 // ---------- import ----------

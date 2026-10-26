@@ -4,7 +4,7 @@ import { bytesToB64, b64ToBytes } from './core/raster.js';
 let dbp = null;
 function db() {
   if (dbp) return dbp;
-  dbp = new Promise((resolve, reject) => {
+  const p0 = dbp = new Promise((resolve, reject) => {
     const req = indexedDB.open('pixel-studio', 1);
     req.onupgradeneeded = () => {
       const d = req.result;
@@ -12,14 +12,27 @@ function db() {
       d.createObjectStore('summaries', { keyPath: 'id' });
       d.createObjectStore('settings');
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const d = req.result;
+      // The connection can die (Safari < 26.x bug, storage pressure, another tab upgrading): forget it so the next call reopens.
+      d.onclose = () => { if (dbp === p0) dbp = null; };
+      d.onversionchange = () => { d.close(); if (dbp === p0) dbp = null; };
+      resolve(d);
+    };
+    req.onerror = () => { if (dbp === p0) dbp = null; reject(req.error); };
   });
   return dbp;
 }
-function tx(store, mode, fn) {
+// Test hook: simulate the browser dropping the IndexedDB connection.
+export async function _dropConnectionForTest() { const d = await db(); d.close(); /* close() does not fire onclose */ }
+const isDeadConnection = (e) => e && (e.name === 'InvalidStateError' || /closing|closed|connection/i.test(e.message || ''));
+function tx(store, mode, fn, retried = false) {
   return db().then((d) => new Promise((resolve, reject) => {
-    const t = d.transaction(store, mode);
+    let t;
+    try { t = d.transaction(store, mode); } catch (e) {
+      if (!retried && isDeadConnection(e)) { dbp = null; resolve(tx(store, mode, fn, true)); return; }
+      reject(e); return;
+    }
     const s = Array.isArray(store) ? store.map((n) => t.objectStore(n)) : t.objectStore(store);
     let result;
     Promise.resolve(fn(s)).then((r) => (result = r));
