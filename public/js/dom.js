@@ -8,6 +8,15 @@ export const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.
 export function capture(el, pointerId) {
   try { el.setPointerCapture(pointerId); } catch {}
 }
+// iPadOS Scribble swallows fast Apple Pencil pointerdown/pointerup pairs on any element (WebKit bug 217430,
+// still reproducible on iPadOS 18/26). A non-passive touchmove listener that calls preventDefault() stops it.
+// Only for drawing surfaces — never on scrollable panels.
+export function claimPencil(el) {
+  if (!el || el.__pencilClaimed) return el;
+  el.__pencilClaimed = true;
+  el.addEventListener('touchmove', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+  return el;
+}
 // VoiceOver: icon-only buttons (↶ ☰ 👁 …) get their tooltip as accessible name, minus the shortcut hint.
 export function a11yLabel(el) {
   if (el.hasAttribute('aria-label') || !el.title) return;

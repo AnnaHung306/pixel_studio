@@ -2,7 +2,7 @@
 import { app, on, emit, setUI, undo, redo, getCelBuf, W, H } from './state.js';
 import * as tools from './tools.js';
 import { compositeLayers, hexToRgba } from './core/raster.js';
-import { capture } from './dom.js';
+import { capture, claimPencil } from './dom.js';
 
 let canvas, ctx, stage;
 let dpr = 1;
@@ -253,6 +253,7 @@ function info(e) {
 
 function bindInput() {
   canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+  claimPencil(canvas); // iPadOS Scribble workaround (dom.js)
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);

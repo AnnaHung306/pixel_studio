@@ -1,6 +1,6 @@
 // UI panels: toolbar, options bar, color editor, palette, timeline (layers × frames), onion skin, references, history, preview.
 import { app, on, emit, setUI, commit, undo, redo, jumpHistory, activeLayer, layerIndex, toast, celKey, historyBytes } from './state.js';
-import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confirmBox, capture } from './dom.js';
+import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confirmBox, capture, claimPencil } from './dom.js';
 import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, dropFloating, cancelFloating } from './tools.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
@@ -154,6 +154,7 @@ export function renderColorEditor() {
     hex.addEventListener('change', () => { try { setCur(hexToRgba(hex.value)); } catch { toast('色碼格式錯誤'); } });
     const drag = (el, fn) => {
       const handle = (e) => { const r = el.getBoundingClientRect(); fn(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))); };
+      claimPencil(el);
       el.addEventListener('pointerdown', (e) => { capture(el, e.pointerId); handle(e); el.onpointermove = handle; });
       el.addEventListener('pointerup', () => (el.onpointermove = null));
     };

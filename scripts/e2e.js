@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'pwa', 'cloud', 'keyboard'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'pwa', 'cloud', 'keyboard', 'diag'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1293,6 +1293,47 @@ async function runProfile(name, target, base) {
     await k('Control+Shift+E'); ok(await page.locator('#modal-root .modal', { hasText: '匯出' }).count() === 1, 'Ctrl+Shift+E export dialog'); await page.keyboard.press('Escape');
     const d = await waitDownloads(1, () => k('Control+Shift+S'));
     ok(d[0]?.name.endsWith('.pxs'), 'Ctrl+Shift+S downloads .pxs');
+  };
+
+  S.diag = async () => {
+    // --- Scribble workaround (WebKit bug 217430): drawing surfaces cancel touchmove, scroll panels do not ---
+    const tm = await E(() => {
+      const fire = (el) => { const ev = new Event('touchmove', { bubbles: true, cancelable: true }); el.dispatchEvent(ev); return ev.defaultPrevented; };
+      return { canvas: fire(document.getElementById('view')), sv: fire(document.querySelector('.ce-sv') || document.getElementById('view')), panel: fire(document.getElementById('sidepanel')), timeline: fire(document.getElementById('tl-scroll')) };
+    });
+    ok(tm.canvas && tm.sv, 'canvas + colour picker cancel touchmove (Scribble cannot steal pencil strokes)', JSON.stringify(tm));
+    ok(!tm.panel && !tm.timeline, 'scrollable panels keep native touch scrolling', JSON.stringify(tm));
+    await newProject(16, 16, 'diag');
+    await setPrimary([200, 10, 10, 255]);
+    // rapid Apple Pencil taps (the pattern Scribble used to swallow) — every tap must paint
+    await E(() => { for (let i = 0; i < 8; i++) window.__e2e.stroke([[i * 2, 5]], 'pen'); });
+    const painted = await E(() => [0, 1, 2, 3, 4, 5, 6, 7].filter((i) => window.__e2e.cel(i * 2, 5)[3] === 255).length);
+    ok(painted === 8, `8 rapid pencil taps → 8 pixels (${painted})`);
+    // --- error capture ---
+    await E(() => {
+      window.dispatchEvent(new ErrorEvent('error', { message: 'e2e synthetic error', error: new Error('e2e synthetic error') }));
+      try { window.dispatchEvent(new PromiseRejectionEvent('unhandledrejection', { promise: Promise.resolve(), reason: new Error('e2e synthetic rejection') })); } catch { window.__pixelStudio.diag.record('error', 'Unhandled rejection: e2e synthetic rejection'); }
+    });
+    const lg = await E(() => window.__pixelStudio.diag.log.map((e) => e.msg));
+    ok(lg.some((m) => m.includes('e2e synthetic error')) && lg.some((m) => m.includes('e2e synthetic rejection')), 'global error + unhandled rejection are captured', lg.join(' | '));
+    ok(lg.some((m) => m.startsWith('啟動')), 'boot is logged');
+    ok(await E(() => [...document.querySelectorAll('#toast .toast')].some((t) => t.textContent.includes('診斷資訊'))), 'error toast points to 診斷資訊');
+    ok(await E(() => { const d = window.__pixelStudio.diag; for (let i = 0; i < 150; i++) d.record('info', 'x' + i); return d.log.length; }) === 100, 'log is a 100-entry ring buffer');
+    // --- dialog ---
+    await menu('診斷資訊');
+    await page.waitForSelector('#diag-text', { timeout: 5000 }).catch(() => {});
+    const txt = await E(() => document.getElementById('diag-text')?.textContent || '');
+    ok(txt.includes(PKG_VERSION) && txt.includes('[裝置]') && txt.includes('[儲存]') && txt.includes('[專案]') && txt.includes('[復原歷史]'), 'diagnostics show version, device, storage, project, history', txt.slice(0, 300));
+    ok(txt.includes('size: 16×16') && !/AAAA|base64/.test(txt), 'diagnostics include project size but no artwork data');
+    await layoutOk('diagnostics dialog');
+    const d = await waitDownloads(1, () => modalBtn('下載診斷檔'));
+    let j = null; try { j = JSON.parse(d[0].buf.toString('utf8')); } catch {}
+    ok(d[0]?.name.startsWith('pixel-studio-diagnostics-') && j?.format === 'pixel-studio-diagnostics' && j.environment.app.version === PKG_VERSION && Array.isArray(j.log), 'diagnostics download is valid JSON', d[0]?.name);
+    ok(j && !JSON.stringify(j).includes('"cels"'), 'downloaded report contains no cel data');
+    await modalBtn('複製');
+    await settle(200);
+    ok(await E(() => document.getElementById('toast').textContent.includes('複製') || document.getElementById('toast').textContent.includes('拷貝')), 'copy gives feedback');
+    await closeModals();
   };
 
   for (const s of suites) {

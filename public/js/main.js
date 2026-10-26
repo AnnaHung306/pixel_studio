@@ -1,5 +1,5 @@
 // Pixel Studio — app bootstrap: wiring, menus, keyboard shortcuts, autosave, playback.
-import { app, on, emit, setDoc, newDoc, undo, redo, setUI, toast } from './state.js';
+import { app, on, emit, setDoc, newDoc, undo, redo, setUI, toast, historyBytes } from './state.js';
 import { initView, fitView, zoomAt, getDocCanvas, isTyping } from './view.js';
 import * as P from './panels.js';
 import * as T from './tools.js';
@@ -10,6 +10,7 @@ import * as store from './storage.js';
 import { cloud, detectServer, onDocOpened, syncNow, loggedIn } from './cloud.js';
 import { h, popupMenu, prompt, capture, isIOS, a11yLabel } from './dom.js';
 import { APP_VERSION } from './version.js';
+import * as diag from './diag.js';
 
 // ---------- open / autosave (state machine: saved → dirty → saving → saved | error) ----------
 // Every change bumps `rev`; a save records the rev it wrote, so a change made while saving is never lost.
@@ -41,6 +42,7 @@ async function saveNow() {
     } catch (e) {
       save.quota = store.isQuotaError(e);
       console.info('[autosave] failed:', e?.name || '', e?.message || e);
+      diag.record('warn', `自動儲存失敗：${e?.name || ''} ${e?.message || e}`);
       setSaveState('error', e);
       scheduleRetry();
     }
@@ -289,6 +291,7 @@ function mainMenu(anchor) {
     '-',
     { label: '伺服器 · 雲端 · AI API…', action: () => D.serverDialog() },
     { label: '快捷鍵說明', action: D.shortcutsDialog },
+    { label: '診斷資訊（回報問題用）…', action: diagDialog },
     { label: '關於 Pixel Studio', action: about },
   ]);
 }
@@ -326,6 +329,43 @@ async function about() {
       h('p', { class: 'small' }, '可「加入主畫面」離線使用（需 HTTPS 或 localhost 才能離線快取）。')),
   }));
 }
+
+// ---------- diagnostics (1.4.0) ----------
+function diagContext() {
+  const m = app.doc?.meta;
+  const MB = (b) => (b / 1048576).toFixed(1) + ' MB';
+  return {
+    project: m ? { size: `${m.width}×${m.height}`, layers: m.layers.length, frames: m.frames.length, celCount: app.doc.cels.size, pixelMB: MB([...app.doc.cels.values()].reduce((a, b) => a + b.byteLength, 0)), refs: app.doc.refs.size, cloud: !!app.doc.cloud } : null,
+    history: { steps: app.history.undo.length, redo: app.history.redo.length, memory: MB(historyBytes()), budget: MB(app.history.budget), trimmed: app.history.trimmed },
+    save: { state: save.state, lastSaved: save.lastSaved ? new Date(save.lastSaved).toISOString() : null, error: save.error ? `${save.error.name || ''} ${save.error.message || ''}`.trim() : null },
+    server: { available: !!cloud.available, loggedIn: loggedIn() },
+  };
+}
+async function diagDialog() {
+  const env = await diag.environment(diagContext());
+  const text = diag.formatReport(env);
+  const { modal } = await import('./dom.js');
+  const pre = h('pre', { class: 'diag-text', id: 'diag-text', tabindex: 0 }, text);
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(text); toast('已複製診斷資訊'); }
+    catch { const r = document.createRange(); r.selectNodeContents(pre); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); toast('請長按選取的文字並拷貝'); }
+  };
+  const dl = () => { const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19); import('./dom.js').then(({ download }) => download(new Blob([JSON.stringify(diag.reportObject(env), null, 2)], { type: 'application/json' }), `pixel-studio-diagnostics-${stamp}.json`)); };
+  modal({
+    title: '診斷資訊',
+    wide: true,
+    body: h('div', {}, h('p', { class: 'small' }, '回報問題時請附上這段資訊與 iPad 型號、iPadOS 版本。內容不含你的作品，也不會自動傳送到任何地方。'), pre),
+    buttons: [{ label: '下載診斷檔', onClick: () => { dl(); return false; } }, { label: '複製', class: 'primary', onClick: () => { copy(); return false; } }],
+  });
+}
+let errToastAt = 0;
+diag.onRecord((e) => {
+  if (e.level !== 'error') return;
+  const now = Date.now();
+  if (now - errToastAt < 10000) return;
+  errToastAt = now;
+  toast('發生錯誤，可到「☰ → 診斷資訊」查看並回報', 'warn');
+});
 
 // ---------- keyboard ----------
 const toolKeys = { b: 'pencil', e: 'eraser', g: 'fill', i: 'eyedropper', l: 'line', u: 'rect', o: 'ellipse', m: 'select', q: 'lasso', v: 'move', h: 'hand' };
@@ -420,6 +460,8 @@ export function applyTouchClass() {
   document.documentElement.classList.toggle('touch', !!(isIOS || coarse));
 }
 async function boot() {
+  diag.installErrorCapture();
+  diag.record('info', `啟動 ${APP_VERSION}`);
   applyTouchClass();
   document.querySelectorAll('button[title]').forEach(a11yLabel);
   document.getElementById('view').setAttribute('role', 'img');
@@ -451,6 +493,6 @@ async function boot() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   // ask the browser not to evict IndexedDB under storage pressure (Safari may otherwise clear site data)
   navigator.storage?.persist?.().catch(() => {});
-  window.__pixelStudio = { app, T, A, io, D, P, store, cloud, setUI, undo, redo, save, saveNow };
+  window.__pixelStudio = { app, T, A, io, D, P, store, cloud, setUI, undo, redo, save, saveNow, diag };
 }
-boot().catch((e) => { console.error(e); toast('啟動失敗：' + e.message); });
+boot().catch((e) => { console.error(e); diag.record('error', '啟動失敗：' + e.message, e.stack); toast('啟動失敗：' + e.message); });
