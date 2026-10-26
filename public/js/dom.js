@@ -8,6 +8,13 @@ export const isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (/Macintosh/.
 export function capture(el, pointerId) {
   try { el.setPointerCapture(pointerId); } catch {}
 }
+// VoiceOver: icon-only buttons (↶ ☰ 👁 …) get their tooltip as accessible name, minus the shortcut hint.
+export function a11yLabel(el) {
+  if (el.hasAttribute('aria-label') || !el.title) return;
+  const txt = (el.textContent || '').trim();
+  if (txt && /[\p{L}\p{N}]{2,}/u.test(txt)) return; // already has a readable text label
+  el.setAttribute('aria-label', el.title.replace(/\s*[（(][^）)]*[）)]\s*$/, '').trim() || el.title);
+}
 export function h(tag, attrs = {}, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -20,6 +27,7 @@ export function h(tag, attrs = {}, ...children) {
     else el.setAttribute(k, v === true ? '' : v);
   }
   for (const c of children.flat(Infinity)) if (c !== null && c !== undefined && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  if (tag === 'button') a11yLabel(el);
   return el;
 }
 
@@ -32,7 +40,7 @@ export function modal({ title, body, buttons = [], wide = false, onClose }) {
   // if the dialog was removed some other way, never keep swallowing Escape for the rest of the app
   const esc = (e) => { if (!bd.isConnected) { close(null); return; } if (e.key === 'Escape') { e.stopPropagation(); close(null); } };
   const footer = buttons.length ? h('footer', {}, buttons.map((b) => h('button', { class: 'btn ' + (b.class || ''), onclick: async () => { const v = b.onClick ? await b.onClick() : b.value; if (v !== false) close(v ?? b.value ?? true); } }, b.label))) : null;
-  const m = h('div', { class: 'modal' + (wide ? ' wide' : '') }, h('header', {}, title, h('button', { class: 'ib x', onclick: () => close(null) }, '✕')), h('div', { class: 'body' }, body), footer);
+  const m = h('div', { class: 'modal' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-label': typeof title === 'string' ? title : null }, h('header', {}, title, h('button', { class: 'ib x', title: '關閉', onclick: () => close(null) }, '✕')), h('div', { class: 'body' }, body), footer);
   const bd = h('div', { class: 'backdrop', onpointerdown: (e) => { if (e.target === bd) close(null); } }, m);
   root.append(bd);
   document.addEventListener('keydown', esc, true);

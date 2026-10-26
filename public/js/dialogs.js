@@ -74,7 +74,7 @@ export function canvasSizeDialog() {
   const anchor = h('div', { class: 'anchor' });
   const drawAnchor = () => {
     anchor.innerHTML = '';
-    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) anchor.append(h('button', { class: ax === i / 2 && ay === j / 2 ? 'on' : '', onclick: () => { ax = i / 2; ay = j / 2; drawAnchor(); } }));
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) anchor.append(h('button', { class: ax === i / 2 && ay === j / 2 ? 'on' : '', 'aria-label': '錨點：' + ['上', '中', '下'][j] + ['左', '中', '右'][i], 'aria-pressed': ax === i / 2 && ay === j / 2 ? 'true' : 'false', onclick: () => { ax = i / 2; ay = j / 2; drawAnchor(); } }));
   };
   drawAnchor();
   const dlg = modal({

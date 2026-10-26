@@ -8,7 +8,7 @@ import * as D from './dialogs.js';
 import * as io from './io.js';
 import * as store from './storage.js';
 import { cloud, detectServer, onDocOpened, syncNow, loggedIn } from './cloud.js';
-import { h, popupMenu, prompt, capture } from './dom.js';
+import { h, popupMenu, prompt, capture, isIOS, a11yLabel } from './dom.js';
 import { APP_VERSION } from './version.js';
 
 // ---------- open / autosave ----------
@@ -208,6 +208,7 @@ function mainMenu(anchor) {
     { header: '檢視' },
     { label: '符合視窗', key: '0', action: fitView },
     { label: '放大 / 縮小', key: '+ / −', action: () => zoomAt(2) },
+    { label: app.ui.showGrid ? '隱藏像素格線' : '顯示像素格線', key: "Ctrl+'", action: () => setUI({ showGrid: !app.ui.showGrid }) },
     { label: '自訂格線…', action: gridDialog },
     '-',
     { label: '伺服器 · 雲端 · AI API…', action: () => D.serverDialog() },
@@ -328,7 +329,18 @@ window.addEventListener('drop', (e) => {
 });
 
 // ---------- boot ----------
+// Touch UI (ADR-002): 44pt targets on iOS/iPadOS and any coarse primary pointer. Set before the first render.
+export function applyTouchClass() {
+  const coarse = window.matchMedia?.('(pointer: coarse)').matches;
+  document.documentElement.classList.toggle('touch', !!(isIOS || coarse));
+}
 async function boot() {
+  applyTouchClass();
+  document.querySelectorAll('button[title]').forEach(a11yLabel);
+  document.getElementById('view').setAttribute('role', 'img');
+  document.getElementById('view').setAttribute('aria-label', '像素畫布');
+  document.getElementById('toolbar').setAttribute('role', 'toolbar');
+  document.getElementById('toolbar').setAttribute('aria-label', '繪圖工具');
   initView();
   bindTopbar();
   window.addEventListener('keydown', onKey);

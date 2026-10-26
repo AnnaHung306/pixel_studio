@@ -35,10 +35,10 @@ export function renderToolbar() {
   const tb = document.getElementById('toolbar');
   tb.innerHTML = '';
   for (const t of TOOLS) {
-    tb.append(h('button', { class: 'tool' + (app.ui.tool === t.id ? ' on' : ''), title: `${t.label} (${t.key})`, html: icon(t.id), onclick: () => setTool(t.id) }));
+    tb.append(h('button', { class: 'tool' + (app.ui.tool === t.id ? ' on' : ''), title: `${t.label} (${t.key})`, 'aria-label': t.label, 'aria-pressed': app.ui.tool === t.id ? 'true' : 'false', html: icon(t.id), onclick: () => setTool(t.id) }));
   }
-  const p = h('div', { class: 'swatch-p checker' + (app.ui.activeSlot === 'primary' ? ' active' : ''), title: '主要顏色（點選後編輯）', onclick: () => setUI({ activeSlot: 'primary' }) }, h('span', { class: 'swatch-fill', style: { background: colorBg(app.ui.primary) } }));
-  const s = h('div', { class: 'swatch-s checker' + (app.ui.activeSlot === 'secondary' ? ' active' : ''), title: '次要顏色（右鍵繪製）', onclick: () => setUI({ activeSlot: 'secondary' }) }, h('span', { class: 'swatch-fill', style: { background: colorBg(app.ui.secondary) } }));
+  const p = h('div', { class: 'swatch-p checker' + (app.ui.activeSlot === 'primary' ? ' active' : ''), title: '主要顏色（點選後編輯）', role: 'button', 'aria-label': '主要顏色', onclick: () => setUI({ activeSlot: 'primary' }) }, h('span', { class: 'swatch-fill', style: { background: colorBg(app.ui.primary) } }));
+  const s = h('div', { class: 'swatch-s checker' + (app.ui.activeSlot === 'secondary' ? ' active' : ''), title: '次要顏色（右鍵繪製）', role: 'button', 'aria-label': '次要顏色', onclick: () => setUI({ activeSlot: 'secondary' }) }, h('span', { class: 'swatch-fill', style: { background: colorBg(app.ui.secondary) } }));
   tb.append(h('div', { class: 'colors' }, p, s));
   tb.append(h('button', { class: 'tool', title: '交換顏色 (X)', onclick: swapColors, style: { fontSize: '16px' } }, '⇄'));
   const mini = document.getElementById('mini-color');
@@ -199,7 +199,7 @@ export function renderPalette() {
   const p = rgbaToHex(app.ui.primary), s = rgbaToHex(app.ui.secondary);
   pal.forEach((hex) => {
     const c = hexToRgba(hex);
-    const el = h('div', { class: 'pal checker' + (hex === p ? ' sel' : '') + (hex === s ? ' sel2' : ''), title: hex }, h('span', { class: 'swatch-fill', style: { background: colorBg(c) } }));
+    const el = h('div', { class: 'pal checker' + (hex === p ? ' sel' : '') + (hex === s ? ' sel2' : ''), title: hex, role: 'button', 'aria-label': `調色盤顏色 ${hex}` }, h('span', { class: 'swatch-fill', style: { background: colorBg(c) } }));
     let lp = null;
     el.addEventListener('pointerdown', (e) => {
       if (e.button === 2) return;
@@ -254,14 +254,17 @@ function extractPalette() {
 }
 
 // ---------- timeline ----------
-const LH_W = () => (window.innerWidth <= 760 ? 150 : 190);
-const CW = 36;
+// touch devices get 44pt cels / rows / layer buttons (ADR-002)
+const isTouchUI = () => document.documentElement.classList.contains('touch');
+const LH_W = () => (window.innerWidth <= 760 ? (isTouchUI() ? 168 : 150) : (isTouchUI() ? 204 : 190));
+let CW = 36;
 export function renderTimeline() {
   renderTimelineControls();
   const grid = document.getElementById('tl-grid');
   const m = app.doc.meta;
   const nF = m.frames.length;
   grid.innerHTML = '';
+  CW = isTouchUI() ? 44 : 36;
   grid.style.gridTemplateColumns = `${LH_W()}px repeat(${nF}, ${CW}px)`;
   // tags row
   grid.append(h('div', { class: 'tl-tagcorner small', style: { height: '18px', padding: '0 6px', lineHeight: '18px' } }, '標籤'));
@@ -275,7 +278,7 @@ export function renderTimeline() {
   }
   grid.append(tagRow);
   // frame header
-  grid.append(h('div', { class: 'tl-corner small', style: { height: '34px', display: 'flex', alignItems: 'center', padding: '0 6px', position: 'sticky', top: 0, zIndex: 4 } }, `圖層 ${m.layers.length} · 影格 ${nF}`));
+  grid.append(h('div', { class: 'tl-corner small', style: { height: isTouchUI() ? '44px' : '34px', display: 'flex', alignItems: 'center', padding: '0 6px', position: 'sticky', top: 0, zIndex: 4 } }, `圖層 ${m.layers.length} · 影格 ${nF}`));
   const sel = app.ui.frameSel;
   m.frames.forEach((f, i) => {
     const el = h('div', { class: 'tl-fh' + (i === app.ui.frame ? ' cur' : '') + (sel && i >= sel[0] && i <= sel[1] ? ' insel' : ''), title: `影格 ${i + 1}，${f.duration}ms（雙擊修改時長，Shift+點選選取範圍）` },
@@ -294,7 +297,7 @@ export function renderTimeline() {
   for (let r = m.layers.length - 1; r >= 0; r--) {
     const L = m.layers[r];
     const isCur = L.id === app.ui.layerId;
-    const lh = h('div', { class: 'tl-lh' + (isCur ? ' cur' : ''), 'data-layer': L.id },
+    const lh = h('div', { class: 'tl-lh' + (isCur ? ' cur' : ''), 'data-layer': L.id, style: { width: LH_W() + 'px' } },
       h('span', { class: 'grip', title: '拖曳調整順序' }, '⋮⋮'),
       h('button', { class: 'tiny' + (L.visible ? '' : ' off'), title: '顯示 / 隱藏', onclick: (e) => { e.stopPropagation(); A.updateLayer(L.id, { visible: !L.visible }, L.visible ? '隱藏圖層' : '顯示圖層'); } }, '👁'),
       h('button', { class: 'tiny' + (L.locked ? '' : ' off'), title: '鎖定（鎖定後 AI 也無法寫入）', onclick: (e) => { e.stopPropagation(); A.updateLayer(L.id, { locked: !L.locked }, L.locked ? '解鎖圖層' : '鎖定圖層'); } }, L.locked ? '🔒' : '🔓'),
@@ -312,6 +315,7 @@ export function renderTimeline() {
   }
   // keep current frame visible
   const scroll = document.getElementById('tl-scroll');
+  scroll.style.scrollPaddingLeft = LH_W() + 'px'; // sticky layer column must not cover a cel scrolled into view
   const x = LH_W() + app.ui.frame * CW;
   if (x < scroll.scrollLeft + LH_W() || x + CW > scroll.scrollLeft + scroll.clientWidth) scroll.scrollLeft = Math.max(0, x - LH_W() - 40);
 }

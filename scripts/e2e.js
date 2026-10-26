@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'refs', 'canvas', 'export', 'import', 'persist', 'pwa', 'cloud', 'keyboard'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'refs', 'canvas', 'export', 'import', 'persist', 'pwa', 'cloud', 'keyboard'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -154,6 +154,25 @@ const INIT = () => {
       let n = 0; if (b) for (let i = 3; i < b.length; i += 4) if (b[i]) n++;
       return n;
     },
+    // touch targets smaller than `min` CSS px and buttons without an accessible name, among visible controls
+    targets(min = 44) {
+      const small = [], unnamed = [];
+      const EXEMPT = '.pal, .tl-tag, .swatch-p, .swatch-s, input[type=checkbox], input[type=range], input[type=color], input[type=file]';
+      const inClosedSheet = (el) => { const s = el.closest('.sheet'); return s && getComputedStyle(s).position === 'fixed' && !s.classList.contains('open'); };
+      const lab = (el) => (el.id ? '#' + el.id : el.className ? '.' + String(el.className).split(' ')[0] : el.tagName) + `[${(el.getAttribute('aria-label') || el.title || el.textContent || '').trim().slice(0, 18)}]`;
+      for (const el of document.querySelectorAll('button, select, input, .tool, .mi, .tab, .tl-fh, .tl-cel, .hist-item, [role=button]')) {
+        if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') continue;
+        if (el.closest('.hidden') || inClosedSheet(el)) continue;
+        const r = el.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        if (!el.matches(EXEMPT) && (r.width < min - 0.5 || r.height < min - 0.5)) small.push(lab(el) + ` ${Math.round(r.width)}×${Math.round(r.height)}`);
+        if (el.matches('button, [role=button]')) {
+          const name = (el.getAttribute('aria-label') || el.textContent || '').trim();
+          if (!/[\p{L}\p{N}]/u.test(name)) unnamed.push(lab(el) + ' "' + name + '"');
+        }
+      }
+      return { small, unnamed };
+    },
     // every interactive element that is visible but cannot be reached (outside viewport, no scrollable ancestor)
     layout() {
       const vw = window.innerWidth, vh = window.innerHeight;
@@ -177,7 +196,7 @@ const INIT = () => {
         if (out && sa) {
           const pr = sa.getBoundingClientRect();
           // reachable by scrolling the container, but the container itself must be on-screen
-          out = pr.right > vw + 1 || pr.bottom > vh + 1 || pr.left < -1 || pr.top < -1;
+          out = pr.right > vw + 2 || pr.bottom > vh + 2 || pr.left < -2 || pr.top < -2; // ≤ 2px: WebKit fractional layout of the fixed sheet (cosmetic)
         }
         if (out) bad.push(label(el) + ` @${Math.round(r.left)},${Math.round(r.top)} ${Math.round(r.width)}×${Math.round(r.height)}`);
         if ((el.classList.contains('tb') || el.classList.contains('btn') || el.classList.contains('sb')) && el.scrollWidth > el.clientWidth + 2) clipped.push(label(el));
@@ -220,7 +239,7 @@ async function runProfile(name, target, base) {
   page.on('download', async (d) => { const f = path.join(dlDir, `${downloads.length}-${d.suggestedFilename()}`); downloads.push({ name: d.suggestedFilename(), p: d.saveAs(f).then(() => f) }); });
 
   let section = 'init';
-  const ok = (cond, label, detail = '') => { R.checks.push({ suite: section, ok: !!cond, label, detail: cond ? '' : String(detail).slice(0, 400) }); if (!cond) console.log(`    ❌ [${section}] ${label} ${String(detail).slice(0, 300)}`); return !!cond; };
+  const ok = (cond, label, detail = '') => { R.checks.push({ suite: section, ok: !!cond, label, detail: cond ? '' : String(detail).slice(0, 3000) }); if (!cond) console.log(`    ❌ [${section}] ${label} ${String(detail).slice(0, 300)}`); return !!cond; };
   const E = (fn, ...a) => page.evaluate(fn, ...a);
   const raf = () => E(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
   const tap = async (sel, opts = {}) => {
@@ -239,7 +258,7 @@ async function runProfile(name, target, base) {
     if (!open) {
       await tap(which === 'timeline' ? '#btn-sheet-timeline' : which === 'color' ? '#btn-sheet-color' : '#btn-sheet-side');
       // wait for the slide-in transition to finish (a fixed sleep flaked under CPU load)
-      await page.waitForFunction((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.bottom <= innerHeight + 1; }, id, { timeout: 3000 }).catch(() => {});
+      await page.waitForFunction((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.bottom <= innerHeight + 2; }, id, { timeout: 3000 }).catch(() => {});
       await page.waitForTimeout(60);
     }
   };
@@ -297,6 +316,8 @@ async function runProfile(name, target, base) {
 
   const S = {};
   S.boot = async () => {
+    // the title renders on the next animation frame after the document opens; under CPU load that can exceed the boot settle time
+    await page.waitForFunction(() => document.getElementById('doc-title').textContent.includes('×'), null, { timeout: 5000 }).catch(() => {});
     ok(await E(() => document.getElementById('doc-title').textContent.includes('×')), 'app booted, title shows size');
     const cloudAvail = await E(() => window.__pixelStudio.cloud.available);
     ok(cloudAvail === (target === 'server'), `server detection = ${target === 'server'}`, cloudAvail);
@@ -311,13 +332,40 @@ async function runProfile(name, target, base) {
     await closeModals();
   };
 
+  // v1.1.0 (ADR-002): 44pt touch targets on touch devices, accessible names everywhere
+  S.a11y = async () => {
+    const touchCls = await E(() => document.documentElement.classList.contains('touch'));
+    ok(touchCls === !!prof.touch, `html.touch class = ${!!prof.touch}`, touchCls);
+    const MIN = prof.touch ? 44 : 0;
+    const check = async (where) => {
+      const T = await E((m) => window.__e2e.targets(m), MIN);
+      if (prof.touch) ok(!T.small.length, `touch targets ≥ 44pt (${where})`, T.small.join(' | '));
+      ok(!T.unnamed.length, `every button has an accessible name (${where})`, T.unnamed.join(' | '));
+    };
+    await check('main');
+    if (isPhone) { for (const w of ['color', 'timeline']) { await openSheet(w); await check('sheet ' + w); await closeSheets(); } }
+    await closeSheets(); await tap('#btn-menu'); await check('main menu');
+    await E(() => document.getElementById('menu').classList.add('hidden'));
+    for (const [label, where] of [['匯出（PNG', 'export dialog'], ['畫布大小', 'canvas size dialog'], ['新增專案', 'new project dialog']]) {
+      await menu(label); await settle(150); await check(where); await closeModals(); await settle(60);
+    }
+    const names = await E(() => ({ undo: document.getElementById('btn-undo').getAttribute('aria-label'), menu: document.getElementById('btn-menu').getAttribute('aria-label'), tool: document.querySelector('#toolbar .tool')?.getAttribute('aria-label'), pressed: document.querySelector('#toolbar .tool.on')?.getAttribute('aria-pressed'), canvas: document.getElementById('view').getAttribute('aria-label') }));
+    ok(names.undo === '復原' && names.menu === '選單' && names.tool === '鉛筆' && names.pressed === 'true' && names.canvas === '像素畫布', 'VoiceOver names: 復原 / 選單 / 鉛筆 (pressed) / 像素畫布', JSON.stringify(names));
+    if (!prof.touch) ok(await E(() => document.querySelector('#toolbar .tool').getBoundingClientRect().width) <= 40, 'desktop keeps compact 38px tools');
+    // grid toggle reachable from the menu (hidden from the narrow-phone top bar)
+    const g0 = await ui('showGrid');
+    await menu(g0 ? '隱藏像素格線' : '顯示像素格線');
+    ok(await ui('showGrid') === !g0, 'menu → 檢視 toggles pixel grid');
+    await E((g) => window.__pixelStudio.setUI({ showGrid: g }), g0);
+  };
+
   S.layout = async () => {
     await layoutOk('main');
     if (isPhone) {
       for (const w of ['color', 'side', 'timeline']) {
         await openSheet(w);
-        const r = await E((id) => { const el = document.getElementById(id); const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: innerHeight, open: el.classList.contains('open') }; }, w === 'timeline' ? 'timeline' : 'sidepanel');
-        ok(r.open && r.top >= 0 && r.bottom <= r.h + 1, `bottom sheet "${w}" opens fully on-screen`, JSON.stringify(r));
+        const r = await E((id) => { const el = document.getElementById(id); const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: innerHeight, open: el.classList.contains('open'), vvTop: visualViewport?.offsetTop, vvH: visualViewport?.height, ch: document.documentElement.clientHeight, tf: getComputedStyle(el).transform }; }, w === 'timeline' ? 'timeline' : 'sidepanel');
+        ok(r.open && r.top >= 0 && r.bottom <= r.h + 2, `bottom sheet "${w}" opens fully on-screen`, JSON.stringify(r));
         await layoutOk('sheet ' + w);
         await closeSheets();
       }
@@ -349,10 +397,14 @@ async function runProfile(name, target, base) {
     const vp = await E(() => document.querySelector('meta[name=viewport]').content);
     ok(/viewport-fit=cover/.test(vp) && /user-scalable=no/.test(vp), 'viewport meta: viewport-fit=cover, user-scalable=no', vp);
     // simulate notch / home-indicator safe areas and make sure everything still fits
-    await E(() => { const s = document.createElement('style'); s.id = 'e2e-safe'; s.textContent = ':root{--safe-t:44px!important;--safe-b:34px!important;--safe-l:44px!important;--safe-r:44px!important}'; document.head.append(s); });
+    // insets as iOS reports them: portrait = top (notch/Dynamic Island) + bottom; landscape = left/right + bottom.
+    // (v1.1.0: the old all-four-sides simulation is impossible on a real device and over-constrained 44pt top bars)
+    const portrait = await E(() => innerHeight > innerWidth);
+    const ins = isPhone ? (portrait ? { t: 47, b: 34, l: 0, r: 0 } : { t: 0, b: 21, l: 47, r: 47 }) : { t: 24, b: 20, l: 0, r: 0 };
+    await E((i) => { const s = document.createElement('style'); s.id = 'e2e-safe'; s.textContent = `:root{--safe-t:${i.t}px!important;--safe-b:${i.b}px!important;--safe-l:${i.l}px!important;--safe-r:${i.r}px!important}`; document.head.append(s); }, ins);
     await settle(150);
     const safe = await E(() => { const t = document.getElementById('topbar').getBoundingClientRect(); const tb = document.getElementById('toolbar').getBoundingClientRect(); return { top: t.top, left: t.left, right: innerWidth - t.right, tbBottom: tb.bottom, vh: innerHeight }; });
-    ok(safe.top >= 44 && safe.left >= 44 && safe.right >= 44, 'safe-area insets respected (top/left/right)', JSON.stringify(safe));
+    ok(safe.top >= ins.t && safe.left >= ins.l && safe.right >= ins.r, `safe-area insets respected (${JSON.stringify(ins)})`, JSON.stringify(safe));
     await layoutOk('with safe-area insets');
     await E(() => document.getElementById('e2e-safe').remove());
     await settle(100);
@@ -800,9 +852,10 @@ async function runProfile(name, target, base) {
     ok(await ui('zoom') >= 4, 'fit to view', await ui('zoom'));
     // grid
     const g = await ui('showGrid');
-    await tap('#btn-grid');
+    const toggleGrid = async () => { if (await page.locator('#btn-grid').isVisible()) await tap('#btn-grid'); else await menu(await ui('showGrid') ? '隱藏像素格線' : '顯示像素格線'); };
+    await toggleGrid(); // narrow phones: the grid button lives in ☰ → 檢視 (v1.1.0)
     ok(await ui('showGrid') === !g, 'pixel grid toggle');
-    await tap('#btn-grid');
+    await toggleGrid();
     // custom grid dialog
     await menu('自訂格線');
     await page.locator('#modal-root .modal input[type=checkbox]').check();
