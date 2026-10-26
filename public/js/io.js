@@ -6,6 +6,7 @@ import { encodeGIF, encodeAPNG, encodePNG, makeZip, decodeGIF } from './formats.
 import { download, readAs, isIOS } from './dom.js';
 import { docToJSON, docFromJSON } from './storage.js';
 import { dropFloating } from './tools.js';
+import { APP_VERSION } from './version.js';
 
 const safeName = () => (app.doc.meta.name || 'pixel').replace(/[\\/:*?"<>|]+/g, '_');
 
@@ -70,7 +71,7 @@ export async function exportSheet(scale, idxs, { layout = 'horizontal', columns 
   const json = {
     frames: framesJson,
     meta: {
-      app: 'Pixel Studio', version: '0.1.0', image: imgName, format: 'RGBA8888',
+      app: 'Pixel Studio', version: APP_VERSION, image: imgName, format: 'RGBA8888',
       size: { w: SW * scale, h: SH * scale }, scale: String(scale),
       frameTags: app.doc.meta.tags.map((t) => ({ name: t.name, from: Math.max(0, idxs.indexOf(t.from)), to: Math.max(0, idxs.indexOf(t.to)), direction: t.direction, color: t.color })),
       layers: app.doc.meta.layers.map((l) => ({ name: l.name, opacity: Math.round(l.opacity * 255), blendMode: l.blend })),

@@ -9,6 +9,7 @@ import * as io from './io.js';
 import * as store from './storage.js';
 import { cloud, detectServer, onDocOpened, syncNow, loggedIn } from './cloud.js';
 import { h, popupMenu, prompt, capture } from './dom.js';
+import { APP_VERSION } from './version.js';
 
 // ---------- open / autosave ----------
 let saveTimer = null;
@@ -234,7 +235,7 @@ function gridDialog() {
 function about() {
   import('./dom.js').then(({ modal }) => modal({
     title: '關於 Pixel Studio',
-    body: h('div', {}, h('p', {}, 'Pixel Studio 0.1 — 觸控優先的像素繪圖與動畫工具（PWA）。'),
+    body: h('div', {}, h('p', {}, `Pixel Studio ${APP_VERSION} — 觸控優先的像素繪圖與動畫工具（PWA）。`),
       h('p', { class: 'small' }, `模式：${cloud.available ? (loggedIn() ? '已連線伺服器' : '偵測到伺服器（未登入）') : '單機（資料存在此瀏覽器）'}`),
       h('p', { class: 'small' }, '可「加入主畫面」離線使用（需 HTTPS 或 localhost 才能離線快取）。')),
   }));

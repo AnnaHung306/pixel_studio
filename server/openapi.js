@@ -1,5 +1,6 @@
 import { OPS } from './ops.js';
 import { SCOPES } from './store.js';
+import { APP_VERSION } from './version.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -51,7 +52,7 @@ export function buildOpenApi(baseUrl) {
     openapi: '3.0.3',
     info: {
       title: 'Pixel Studio AI API',
-      version: '0.1.0',
+      version: APP_VERSION,
       description: '讓 AI 代理讀取與繪製 Pixel Studio 專案。所有 DELETE 請求一律回傳 403：API 金鑰沒有任何刪除能力（無法刪除專案、圖層、影格、cel，也無法清空整個 cel）。同樣的工具也透過 MCP（POST /mcp）提供。',
     },
     servers: [{ url: baseUrl || '/' }],

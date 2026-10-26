@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import { OPS, runOp, ApiError } from './ops.js';
 import { findKey } from './store.js';
+import { APP_VERSION } from './version.js';
 
 const SUPPORTED = ['2025-06-18', '2025-03-26', '2024-11-05'];
 
@@ -33,7 +34,7 @@ async function handleRpc(msg, key, hub) {
         return reply({
           protocolVersion: v,
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: 'pixel-studio', title: 'Pixel Studio', version: '0.1.0' },
+          serverInfo: { name: 'pixel-studio', title: 'Pixel Studio', version: APP_VERSION },
           instructions: 'Pixel Studio 像素繪圖工具。先呼叫 list_projects / get_project_overview，再用 get_frame_image 觀看畫面、get_reference_images 觀看設計稿，最後用 draw_pixels / draw_shape / fill / paste_image / add_frame 等工具作畫。座標原點在左上角。沒有任何刪除功能。',
         });
       }

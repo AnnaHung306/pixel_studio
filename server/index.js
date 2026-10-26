@@ -14,6 +14,7 @@ import { mountMcp } from './mcp.js';
 import { buildOpenApi, docsPage } from './openapi.js';
 import { newProjectMeta } from '../public/js/core/raster.js';
 import { DEFAULT_PALETTE } from '../public/js/core/palettes.js';
+import { APP_VERSION } from './version.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..');
@@ -60,7 +61,7 @@ const hub = {
 };
 
 // ---------------- Health & auth ----------------
-app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'pixel-studio', version: '0.1.0', time: Date.now() }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'pixel-studio', version: APP_VERSION, time: Date.now() }));
 
 const loginAttempts = new Map();
 app.post('/api/auth/login', (req, res) => {

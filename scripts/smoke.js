@@ -12,6 +12,7 @@ const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'pxs-smoke-'));
 const PORT = 18000 + Math.floor(Math.random() * 1000);
 const BASE = `http://127.0.0.1:${PORT}`;
 const PW = 'smoke-test-pw';
+const PKG_VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 
 const srv = spawn(process.execPath, [path.join(ROOT, 'server/index.js')], { env: { ...process.env, PORT: String(PORT), DATA_DIR: DATA, OWNER_PASSWORD: PW, HOST: '127.0.0.1' }, stdio: ['ignore', 'pipe', 'pipe'] });
 let srvLog = '';
@@ -38,6 +39,8 @@ async function waitUp() {
 try {
   await waitUp();
   console.log(`\nPixel Studio smoke test → ${BASE} (DATA_DIR=${DATA})\n`);
+  const health = await req('GET', '/api/health');
+  ok(health.json?.version === PKG_VERSION, `/api/health 版本 = package.json（${PKG_VERSION}）`, health.json?.version);
 
   console.log('擁有者驗證');
   ok((await req('POST', '/api/auth/login', { body: { password: 'wrong' } })).status === 401, '錯誤密碼 → 401');
@@ -129,6 +132,7 @@ try {
   ok((await req('POST', '/mcp', { body: { jsonrpc: '2.0', id: 1, method: 'initialize' } })).status === 401, 'MCP 無金鑰 → 401');
   r = await mcp(K, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'smoke', version: '1' } });
   ok(r.json.result?.serverInfo?.name === 'pixel-studio' && r.headers.get('mcp-session-id'), 'initialize');
+  ok(r.json.result?.serverInfo?.version === PKG_VERSION, 'MCP serverInfo.version = package.json', r.json.result?.serverInfo?.version);
   ok((await req('POST', '/mcp', { token: K, body: { jsonrpc: '2.0', method: 'notifications/initialized' } })).status === 202, 'notifications/initialized → 202');
   r = await mcp(K, 'tools/list', {});
   const names = r.json.result.tools.map((t) => t.name);
@@ -162,6 +166,7 @@ try {
   console.log('文件');
   const oa = await req('GET', '/api/openapi.json');
   ok(oa.status === 200 && oa.json.openapi?.startsWith('3') && Object.keys(oa.json.paths).length >= 12, `OpenAPI 3 規格（${Object.keys(oa.json.paths).length} 個路徑）`);
+  ok(oa.json.info?.version === PKG_VERSION, 'OpenAPI info.version = package.json', oa.json.info?.version);
   const docs = await fetch(BASE + '/docs');
   ok(docs.status === 200 && (await docs.text()).includes('MCP'), '/docs 頁面');
   const home = await fetch(BASE + '/');

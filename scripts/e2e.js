@@ -25,6 +25,7 @@ const DIST = path.join(ROOT, 'dist');
 const OUT = path.join(ROOT, 'test-results', 'e2e');
 const SHOTS = path.join(ROOT, 'docs', 'screenshots');
 const formats = await import(pathToFileURL(path.join(ROOT, 'public/js/formats.js')).href);
+const PKG_VERSION = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 
 // ---------------- profiles ----------------
 const apple = (device, extra = {}) => ({ browser: 'webkit', device, touch: true, ...extra });
@@ -235,7 +236,12 @@ async function runProfile(name, target, base) {
     if (!isPhone) return;
     const id = which === 'timeline' ? 'timeline' : 'sidepanel';
     const open = await E((id) => document.getElementById(id).classList.contains('open'), id);
-    if (!open) { await tap(which === 'timeline' ? '#btn-sheet-timeline' : which === 'color' ? '#btn-sheet-color' : '#btn-sheet-side'); await page.waitForTimeout(280); }
+    if (!open) {
+      await tap(which === 'timeline' ? '#btn-sheet-timeline' : which === 'color' ? '#btn-sheet-color' : '#btn-sheet-side');
+      // wait for the slide-in transition to finish (a fixed sleep flaked under CPU load)
+      await page.waitForFunction((id) => { const r = document.getElementById(id).getBoundingClientRect(); return r.bottom <= innerHeight + 1; }, id, { timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(60);
+    }
   };
   const closeSheets = async () => { if (isPhone) { await E(() => document.querySelectorAll('.sheet.open').forEach((s) => s.classList.remove('open'))); await page.waitForTimeout(250); } };
   const menu = async (label) => { await closeSheets(); await tap('#btn-menu'); await tapText('#menu .mi', label); await settle(); };
@@ -298,6 +304,11 @@ async function runProfile(name, target, base) {
     ok(await newProject(40, 24, 'e2e 測試'), 'new project with custom size 40×24');
     const zoom = await ui('zoom');
     ok(zoom >= 1, 'fit-to-view zoom after new project', zoom);
+    // regression (v1.0.1): About dialog used to show a hard-coded "0.1"
+    await menu('關於 Pixel Studio');
+    const aboutTxt = await E(() => document.querySelector('#modal-root .modal')?.textContent || '');
+    ok(aboutTxt.includes(`Pixel Studio ${PKG_VERSION}`) && !/Pixel Studio 0\.1\b/.test(aboutTxt), `About shows app version ${PKG_VERSION}`, aboutTxt.slice(0, 120));
+    await closeModals();
   };
 
   S.layout = async () => {
@@ -837,8 +848,8 @@ async function runProfile(name, target, base) {
     await openSheet('side');
     await page.locator('#refs input[type=range]').evaluate((e) => { e.value = 0.8; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change')); });
     ok((await meta()).references[0].opacity === 0.8, 'reference opacity slider');
-    await page.locator('#refs input[type=number]').nth(0).fill('3');
-    await page.locator('#refs input[type=number]').nth(0).dispatchEvent('change');
+    await raf(); await settle(60); // the refs panel re-renders after the opacity change; never type into a detached input
+    await page.locator('#refs input[type=number]').nth(0).evaluate((e) => { e.value = '3'; e.dispatchEvent(new Event('input')); e.dispatchEvent(new Event('change')); });
     ok((await meta()).references[0].x === 3, 'reference X offset');
     // reference must not be exported
     const d = await waitDownloads(1, async () => { await E(() => window.__pixelStudio.io.exportPNG(1)); });
@@ -1020,6 +1031,8 @@ async function runProfile(name, target, base) {
       await context.setOffline(false);
       R.offline = offlineOk;
       ok(offlineOk, 'app shell loads offline from the service-worker cache');
+      const keys = await E(() => caches.keys()).catch(() => []);
+      ok(keys.some((k) => k.startsWith(`pixel-studio-${PKG_VERSION}-`)), 'offline cache name carries the app version', keys.join(','));
       if (!offlineOk) await boot();
       await settle(300);
     }
@@ -1027,7 +1040,8 @@ async function runProfile(name, target, base) {
 
   S.cloud = async () => {
     if (target !== 'server') { ok(true, 'cloud: skipped on static target (no server)'); const t = await E(() => document.getElementById('btn-cloud').title); ok(/單機/.test(t), 'static: status shows 單機模式', t); await tap('#btn-cloud'); await settle(300); ok(await page.locator('#modal-root .modal', { hasText: '單機模式' }).count() === 1, 'static: server dialog explains how to start the server'); await closeModals(); return; }
-    await newProject(16, 16, '雲端測試');
+    const CLOUD_NAME = `雲端測試-${name}`; // unique per profile: workers share one server across profiles
+    await newProject(16, 16, CLOUD_NAME);
     await tap('#btn-cloud'); await settle(300);
     expectHttpErrors = 1; expectConsole = /401/;
     await page.locator('#modal-root input[type=password]').fill('wrong');
@@ -1106,13 +1120,13 @@ async function runProfile(name, target, base) {
     // cloud project open from the project browser
     await newProject(8, 8, 'local-only');
     await menu('專案列表'); await settle(800);
-    const cloudCard = page.locator('.proj-card', { hasText: '雲端測試' }).last();
+    const cloudCard = page.locator('.proj-card', { hasText: CLOUD_NAME }).last();
     ok(await page.locator('h4', { hasText: '伺服器專案' }).count() === 1, 'project browser shows 伺服器專案 section');
-    await tap(page.locator('.proj-grid').nth(1).locator('.proj-card', { hasText: '雲端測試' }));
+    await tap(page.locator('.proj-grid').nth(1).locator('.proj-card', { hasText: CLOUD_NAME }));
     await settle(800);
     // (reverting draw_pixels restores that cel as it was before it, which also drops the later MCP rect on the same cel)
     const reopened = await meta();
-    ok(reopened.id === pid && reopened.name === '雲端測試' && (await cel(5, 5))[3] === 0 && (await cel(1, 0))[3] > 0, 'open cloud project from server (reflects revert)', reopened.name);
+    ok(reopened.id === pid && reopened.name === CLOUD_NAME && (await cel(5, 5))[3] === 0 && (await cel(1, 0))[3] > 0, 'open cloud project from server (reflects revert)', reopened.name);
     void cloudCard;
   };
 

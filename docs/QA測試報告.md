@@ -2,6 +2,31 @@
 
 日期：2026-10-25　範圍：前端 PWA（`public/`）、本機伺服器（REST `/api/v1`、MCP `/mcp`、WebSocket 同步）
 
+# 版本測試紀錄（最新在上）
+
+<!-- latest -->
+
+## v1.0.1（2026-10-26，迭代 1）
+
+smoke 54/54；e2e 18 組 3747 項通過、0 失敗。
+
+| 裝置設定 | 引擎 | 伺服器 | 純靜態 dist/ |
+|---|---|---|---|
+| iPad Pro 11 橫向 | webkit 27.2 | 213 ✅ | 194 ✅ |
+| iPad Pro 11 直向 | webkit 27.2 | 213 ✅ | 194 ✅ |
+| iPad（第 7 代）橫向 | webkit 27.2 | 213 ✅ | 194 ✅ |
+| iPad（第 7 代）直向 | webkit 27.2 | 213 ✅ | 194 ✅ |
+| iPad mini 橫向 | webkit 27.2 | 213 ✅ | 194 ✅ |
+| iPad mini 直向 | webkit 27.2 | 213 ✅ | 194 ✅ |
+| iPhone 14 直向 | webkit 27.2 | 225 ✅ | 206 ✅ |
+| iPhone 14 橫向 | webkit 27.2 | 225 ✅ | 206 ✅ |
+| 桌面 1920×1080 | chromium 156.0.8078.4 | 231 ✅ | 212 ✅ |
+
+新增檢查：smoke +3（版本欄位）；e2e 每組 +2（關於版本、離線快取名）。
+
+
+# 1.0.0 基準 QA（2026-10-25）
+
 ## 測試方法
 
 - Linux 上沒有 Xcode iOS 模擬器，改用最接近的方式：**Playwright WebKit 27.2（Safari 的引擎）** 搭配 Playwright 的裝置設定（螢幕尺寸、DPR、`hasTouch`、`isMobile`、iPad／iPhone UA），以及 **Chromium 156** 1920×1080 代表 Windows 桌面。
