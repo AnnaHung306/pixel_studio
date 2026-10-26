@@ -1,5 +1,5 @@
 // Optional server integration: owner login, cloud projects, incremental sync and live WebSocket updates.
-import { app, on, emit, toast, changed, uid } from './state.js';
+import { app, on, emit, toast, changed, uid, pushHistory } from './state.js';
 import { bytesToB64, b64ToBytes } from './core/raster.js';
 import { docToJSON, docFromJSON } from './storage.js';
 import { isStroking } from './tools.js';
@@ -243,8 +243,7 @@ function applyRemote(m) {
   if (!m2.layers.find((l) => l.id === app.ui.layerId)) app.ui.layerId = m2.layers[m2.layers.length - 1].id;
   if (app.ui.frame >= m2.frames.length) app.ui.frame = m2.frames.length - 1;
   const after = { meta: JSON.parse(JSON.stringify(app.doc.meta)), cels: new Map(app.doc.cels), refs: new Map(app.doc.refs), ui: { layerId: app.ui.layerId, frame: app.ui.frame } };
-  app.history.undo.push({ label, kind: origin.kind === 'ai' ? 'ai' : 'remote', before, after, time: Date.now(), activityId: origin.activityId });
-  app.history.redo = [];
+  pushHistory({ label, kind: origin.kind === 'ai' ? 'ai' : 'remote', before, after, time: Date.now(), activityId: origin.activityId });
   changed({ origin: 'remote', silent: true });
   app.doc.sync = { rev: m.rev, at: Date.now() };
   emit('dirty', { origin: 'remote-local' }); // persist to IndexedDB only (cloud already has it)

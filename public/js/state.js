@@ -25,7 +25,7 @@ export const app = {
   selection: null, // { mask: Uint8Array, x, y, w, h }
   floating: null, // { buf, mask, w, h, x, y, base, key, label }
   clipboard: null,
-  history: { undo: [], redo: [], max: 120 },
+  history: { undo: [], redo: [], max: 200, minKeep: 10, budget: 0, trimmed: 0, warned: false },
   overrides: new Map(), // key -> working buffer during a stroke
   busy: false,
 };
@@ -41,7 +41,7 @@ export function newDoc(opts = {}) {
 export function setDoc(doc, { keepHistory = false } = {}) {
   app.doc = doc;
   app.selection = null; app.floating = null; app.overrides.clear();
-  if (!keepHistory) { app.history.undo = []; app.history.redo = []; }
+  if (!keepHistory) { app.history.undo = []; app.history.redo = []; app.history.trimmed = 0; app.history.warned = false; }
   const m = doc.meta;
   if (!m.layers.find((l) => l.id === app.ui.layerId)) app.ui.layerId = m.layers[m.layers.length - 1].id;
   app.ui.frame = Math.min(app.ui.frame, m.frames.length - 1);
@@ -83,14 +83,62 @@ function restore(s) {
   app.ui.frame = Math.max(0, Math.min(s.ui.frame, m.frames.length - 1));
 }
 
+// ---------- history memory budget (ADR-003) ----------
+// iPadOS Safari reloads a tab that uses too much memory (= lost work), so history is bounded by bytes, not only steps.
+// Each entry records the bytes only it keeps alive: buffers in `before` not in `after` (old versions an undo needs)
+// and the reverse (new versions a redo needs). Live buffers belong to the document and are not counted.
+export function defaultHistoryBudget(nav = globalThis.navigator) {
+  const MB = 1048576;
+  const ua = nav?.userAgent || '';
+  const ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && (nav?.maxTouchPoints || 0) > 1);
+  if (ios) return 96 * MB;
+  if (nav?.deviceMemory && nav.deviceMemory <= 4) return 128 * MB;
+  return 320 * MB;
+}
+app.history.budget = defaultHistoryBudget();
+const metaBytes = (m) => JSON.stringify(m).length * 2;
+export function entryCost(before, after) {
+  let bOnly = 0, aOnly = 0;
+  for (const [k, b] of before.cels) if (after.cels.get(k) !== b) bOnly += b.byteLength;
+  for (const [k, b] of after.cels) if (before.cels.get(k) !== b) aOnly += b.byteLength;
+  for (const [k, v] of before.refs) if (after.refs.get(k) !== v) bOnly += v.length * 2;
+  for (const [k, v] of after.refs) if (before.refs.get(k) !== v) aOnly += v.length * 2;
+  const mb = metaBytes(before.meta) + metaBytes(after.meta);
+  return { bOnly: bOnly + mb, aOnly: aOnly + mb };
+}
+const costOf = (e) => e.cost || (e.cost = entryCost(e.before, e.after));
+// Bytes retained only by history (undo keeps old versions, redo keeps newer versions).
+export function historyBytes(h = app.history) {
+  let n = 0;
+  for (const e of h.undo) n += costOf(e).bOnly;
+  for (const e of h.redo) n += costOf(e).aOnly;
+  return n;
+}
+// Drop oldest undo steps while over the step or byte budget (always keep the newest `minKeep`).
+export function enforceHistoryBudget(h = app.history) {
+  let removed = 0;
+  while (h.undo.length > h.max) { h.undo.shift(); removed++; }
+  let bytes = historyBytes(h), byBudget = 0;
+  while (bytes > h.budget && h.undo.length > h.minKeep) { bytes -= costOf(h.undo.shift()).bOnly; byBudget++; }
+  removed += byBudget;
+  h.trimmed += removed;
+  if (byBudget && !h.warned) { h.warned = true; emit('toast', { msg: '復原記憶體已達上限，已自動移除最舊的步驟（作品不受影響）', cls: 'warn' }); }
+  return removed;
+}
+// Push an undoable entry (used by local commits and remote/AI writes).
+export function pushHistory(entry) {
+  entry.cost = entryCost(entry.before, entry.after);
+  app.history.undo.push(entry);
+  app.history.redo = [];
+  enforceHistoryBudget();
+}
+
 // Run `fn` (which mutates app.doc) as one undoable step.
 export function commit(label, fn, { kind = 'local', silent = false } = {}) {
   const before = snapshot();
   const res = fn();
   const after = snapshot();
-  app.history.undo.push({ label, kind, before, after, time: Date.now() });
-  if (app.history.undo.length > app.history.max) app.history.undo.shift();
-  app.history.redo = [];
+  pushHistory({ label, kind, before, after, time: Date.now() });
   changed({ structural: true, origin: kind, silent });
   return res;
 }

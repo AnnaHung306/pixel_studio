@@ -1,5 +1,5 @@
 // UI panels: toolbar, options bar, color editor, palette, timeline (layers × frames), onion skin, references, history, preview.
-import { app, on, emit, setUI, commit, undo, redo, jumpHistory, activeLayer, layerIndex, toast, celKey } from './state.js';
+import { app, on, emit, setUI, commit, undo, redo, jumpHistory, activeLayer, layerIndex, toast, celKey, historyBytes } from './state.js';
 import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confirmBox, capture } from './dom.js';
 import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, dropFloating, cancelFloating } from './tools.js';
 import * as A from './actions.js';
@@ -473,6 +473,9 @@ export function renderHistory() {
   root.append(h('div', { class: 'hist-item' + (U.length === 0 ? ' cur' : ''), onclick: () => jumpHistory(0) }, '◦ 開啟專案'));
   U.forEach((e, i) => root.append(h('div', { class: 'hist-item' + (e.kind === 'ai' ? ' ai' : '') + (i === U.length - 1 ? ' cur' : ''), title: new Date(e.time).toLocaleTimeString(), onclick: () => jumpHistory(i + 1) }, e.label)));
   [...R].reverse().forEach((e, i) => root.append(h('div', { class: 'hist-item future' + (e.kind === 'ai' ? ' ai' : ''), onclick: () => jumpHistory(U.length + i + 1) }, e.label)));
+  const mb = (b) => (b / 1048576).toFixed(1);
+  const hb = historyBytes();
+  root.append(h('div', { class: 'hist-mem small', id: 'hist-mem' }, `${U.length} 步 · 復原記憶體 ${mb(hb)} / ${mb(app.history.budget)} MB` + (app.history.trimmed ? ` · 已移除最舊 ${app.history.trimmed} 步` : '')));
   root.scrollTop = root.scrollHeight;
   document.getElementById('btn-undo').disabled = !U.length;
   document.getElementById('btn-redo').disabled = !R.length;

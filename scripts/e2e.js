@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'pwa', 'cloud', 'keyboard'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'pwa', 'cloud', 'keyboard'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -887,6 +887,34 @@ async function runProfile(name, target, base) {
     await tap(page.locator('#history .hist-item').last());
     ok(await histLen() === 3, 'history panel: tap a future entry jumps forward');
     await closeSheets();
+  };
+
+  S.memory = async () => {
+    await newProject(128, 128, 'memory');
+    const H = () => E(() => { const h = window.__pixelStudio.app.history; return { n: h.undo.length, trimmed: h.trimmed, budget: h.budget, max: h.max }; });
+    const h0 = await H();
+    const MB = 1048576;
+    const ios = prof.browser === 'webkit';
+    ok(h0.max === 200, 'history step cap 200');
+    ok(ios ? h0.budget === 96 * MB : h0.budget >= 128 * MB, `history memory budget for this device (${h0.budget / MB} MB)`);
+    await openSheet('side');
+    await E(() => document.getElementById('panel-history').scrollIntoView());
+    ok(/0 步 · 復原記憶體 0\.0 \/ \d+\.\d MB/.test(await E(() => document.getElementById('hist-mem')?.textContent || '')), 'history panel shows step count and memory', await E(() => document.getElementById('hist-mem')?.textContent));
+    await closeSheets();
+    // shrink the budget to 1 MB (each 128×128 step keeps 64 KB) and paint 40 strokes
+    await E(() => { window.__pixelStudio.app.history.budget = 1048576; });
+    for (let i = 0; i < 40; i++) { await setPrimary([i * 5, 10, 200, 255]); await stroke([[i % 120, 3], [i % 120, 3]]); }
+    const h1 = await H();
+    ok(h1.n >= 10 && h1.n < 40 && h1.trimmed > 0, `budget trims oldest steps (${h1.n} kept, ${h1.trimmed} removed)`);
+    ok(await E(() => window.__pixelStudio.app.history.undo.length >= 10), 'newest 10 steps always kept');
+    ok(await E(() => [...document.querySelectorAll('#toast .toast')].some((t) => t.textContent.includes('復原記憶體'))), 'one-time toast explains trimming');
+    ok(/已移除最舊 \d+ 步/.test(await E(() => document.getElementById('hist-mem').textContent)), 'history panel reports removed steps');
+    // remaining steps still undo correctly
+    const c = await cel(39, 3);
+    await E(() => window.__pixelStudio.undo());
+    ok((await cel(39, 3))[3] === 0 && c[3] === 255, 'undo still works after trimming');
+    await E(() => window.__pixelStudio.redo());
+    await E(() => { window.__pixelStudio.app.history.budget = 96 * 1048576; });
   };
 
   S.refs = async () => {
