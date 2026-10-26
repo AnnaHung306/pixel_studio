@@ -30,7 +30,28 @@ function tx(store, mode, fn) {
 }
 const reqP = (r) => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
 
+// Fault injection for tests (e2e `savestate`): set faults.save = 'quota' | 'error' to make saves fail.
+export const faults = { save: null };
+function injected() {
+  const f = faults.save;
+  if (!f) return null;
+  if (f === 'quota') { try { return new DOMException('The quota has been exceeded.', 'QuotaExceededError'); } catch { const e = new Error('The quota has been exceeded.'); e.name = 'QuotaExceededError'; return e; } }
+  return new Error('injected save failure');
+}
+export function isQuotaError(e) {
+  return !!e && (e.name === 'QuotaExceededError' || e.code === 22 || /quota|space/i.test(e.message || ''));
+}
+// Storage usage as the browser reports it (may be approximate, esp. Safari).
+export async function storageInfo() {
+  const out = { usage: null, quota: null, persisted: null };
+  try { const e = await navigator.storage?.estimate?.(); if (e) { out.usage = e.usage ?? null; out.quota = e.quota ?? null; } } catch {}
+  try { out.persisted = (await navigator.storage?.persisted?.()) ?? null; } catch {}
+  return out;
+}
+
 export async function saveProject(doc, thumb) {
+  const fe = injected();
+  if (fe) throw fe;
   const m = doc.meta;
   const cels = {};
   for (const [k, v] of doc.cels) cels[k] = v;

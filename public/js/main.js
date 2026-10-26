@@ -11,13 +11,89 @@ import { cloud, detectServer, onDocOpened, syncNow, loggedIn } from './cloud.js'
 import { h, popupMenu, prompt, capture, isIOS, a11yLabel } from './dom.js';
 import { APP_VERSION } from './version.js';
 
-// ---------- open / autosave ----------
-let saveTimer = null;
+// ---------- open / autosave (state machine: saved → dirty → saving → saved | error) ----------
+// Every change bumps `rev`; a save records the rev it wrote, so a change made while saving is never lost.
+const save = { state: 'saved', rev: 0, savedRev: 0, error: null, quota: false, lastSaved: 0, retryMs: 0, retryTimer: null, warnedUsage: false };
+let saveTimer = null, saving = null;
+function setSaveState(st, err = null) {
+  save.state = st; save.error = err;
+  const t = document.getElementById('doc-title');
+  if (t) t.dataset.save = st;
+  const label = { saved: '已儲存', dirty: '有未儲存的變更', saving: '儲存中…', error: '儲存失敗' }[st];
+  const live = document.getElementById('save-status');
+  if (live && live.textContent !== label) live.textContent = label;
+  if (t) t.title = `${label} · 點擊重新命名`;
+  renderSaveBanner();
+}
 async function saveNow() {
   clearTimeout(saveTimer); saveTimer = null;
   if (!app.doc) return;
-  try { await store.saveProject(app.doc, thumbnail()); } catch (e) { console.warn('autosave failed', e); }
+  while (saving) { await saving.catch(() => {}); if (save.rev === save.savedRev && save.state !== 'error') return; }
+  const rev = save.rev;
+  setSaveState('saving');
+  saving = (async () => {
+    try {
+      await store.saveProject(app.doc, thumbnail());
+      save.savedRev = rev; save.lastSaved = Date.now(); save.retryMs = 0; save.quota = false;
+      clearTimeout(save.retryTimer); save.retryTimer = null;
+      setSaveState(save.rev === rev ? 'saved' : 'dirty');
+      checkStorageUsage();
+    } catch (e) {
+      save.quota = store.isQuotaError(e);
+      console.info('[autosave] failed:', e?.name || '', e?.message || e);
+      setSaveState('error', e);
+      scheduleRetry();
+    }
+  })();
+  try { await saving; } finally { saving = null; }
+  if (save.state === 'dirty') scheduleSave(200);
 }
+function scheduleSave(ms = 800) { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, ms); }
+function scheduleRetry() {
+  clearTimeout(save.retryTimer);
+  save.retryMs = Math.min(60000, save.retryMs ? save.retryMs * 2 : 4000);
+  save.retryTimer = setTimeout(() => { save.retryTimer = null; if (save.state === 'error') saveNow(); }, save.retryMs);
+}
+function markDirty() {
+  save.rev++;
+  if (save.state !== 'error') setSaveState('dirty');
+  if (save.state === 'error') return; // retry loop owns saving while failing
+  scheduleSave();
+}
+async function checkStorageUsage() {
+  if (save.warnedUsage) return;
+  const i = await store.storageInfo();
+  if (i.usage != null && i.quota && i.usage / i.quota > 0.8) {
+    save.warnedUsage = true;
+    toast(`儲存空間已使用 ${Math.round((i.usage / i.quota) * 100)}%，建議下載備份並刪除不用的專案`, 'warn');
+  }
+}
+function renderSaveBanner() {
+  const b = document.getElementById('save-banner');
+  if (!b) return;
+  if (save.state !== 'error') { if (!b.classList.contains('hidden')) b.classList.add('hidden'); return; }
+  const why = save.quota ? '裝置儲存空間不足，作品沒有存到這台裝置。' : '作品沒有存到這台裝置（' + (save.error?.message || '未知錯誤') + '）。';
+  const msg = b.querySelector('.msg');
+  const text = why + '請先下載備份。';
+  if (msg.textContent !== text) msg.textContent = text;
+  b.classList.remove('hidden');
+}
+function buildSaveBanner() {
+  const b = h('div', { id: 'save-banner', class: 'hidden', role: 'alert' },
+    h('span', { class: 'msg' }),
+    h('span', { class: 'acts' },
+      h('button', { class: 'btn primary', 'data-act': 'backup', onclick: () => io.exportPxs() }, '下載 .pxs 備份'),
+      h('button', { class: 'btn', 'data-act': 'retry', onclick: () => { save.retryMs = 0; saveNow(); } }, '重試'),
+      h('button', { class: 'btn', 'data-act': 'manage', onclick: () => D.projectsDialog() }, '管理專案')));
+  document.getElementById('app').insertBefore(b, document.getElementById('optionsbar'));
+  const live = h('div', { id: 'save-status', class: 'sr-only', 'aria-live': 'polite' });
+  document.body.append(live);
+}
+on('dirty', markDirty);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && saveTimer) saveNow(); });
+window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); });
+window.addEventListener('beforeunload', (e) => { if (save.state === 'error' || save.state === 'dirty' || save.state === 'saving') { if (saveTimer) saveNow(); e.preventDefault(); e.returnValue = ''; } });
+
 function thumbnail() {
   try {
     const src = getDocCanvas();
@@ -30,9 +106,6 @@ function thumbnail() {
     return c.toDataURL('image/png');
   } catch { return null; }
 }
-on('dirty', () => { clearTimeout(saveTimer); saveTimer = setTimeout(saveNow, 800); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && saveTimer) saveNow(); });
-window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); });
 
 async function openDoc(doc) {
   if (app.doc && saveTimer) await saveNow();
@@ -41,10 +114,11 @@ async function openDoc(doc) {
   fitView();
   onDocOpened();
   store.setSetting('lastProject', doc.meta.id);
+  save.rev++;
   await saveNow();
 }
 D.hooks.openDoc = openDoc;
-on('replaceDoc', (doc) => { setDoc(doc, { keepHistory: false }); onDocOpened(); saveNow(); toast('已載入伺服器上較新的版本'); });
+on('replaceDoc', (doc) => { setDoc(doc, { keepHistory: false }); onDocOpened(); save.rev++; saveNow(); toast('已載入伺服器上較新的版本'); });
 on('fit', () => fitView());
 on('saveCopy', (doc) => store.saveProject(doc, null).catch(() => {}));
 
@@ -55,7 +129,7 @@ on('toast', (t) => {
   const el = h('div', { class: 'toast ' + (cls || '') }, msg);
   root.append(el);
   while (root.children.length > 3) root.firstChild.remove();
-  setTimeout(() => el.remove(), cls === 'ai' ? 3500 : 1800);
+  setTimeout(() => el.remove(), cls === 'ai' ? 3500 : cls === 'warn' ? 4500 : 1800);
 });
 
 // ---------- panels refresh ----------
@@ -79,7 +153,9 @@ function refreshDoc() {
     docQueued = false;
     if (!app.doc) return;
     P.renderTimeline(); P.renderRefs(); P.renderPalette();
-    document.getElementById('doc-title').textContent = app.doc.meta.name + `  ${app.doc.meta.width}×${app.doc.meta.height}`;
+    const dt = document.getElementById('doc-title');
+    dt.textContent = app.doc.meta.name + `  ${app.doc.meta.width}×${app.doc.meta.height}`;
+    dt.dataset.save = save.state;
     document.title = `${app.doc.meta.name} — Pixel Studio`;
   });
 }
@@ -218,7 +294,10 @@ function mainMenu(anchor) {
 }
 async function manualSave() {
   T.dropFloating();
+  save.retryMs = 0;
+  if (save.rev === save.savedRev) save.rev++; // force a write even when nothing changed
   await saveNow();
+  if (save.state === 'error') return toast('儲存失敗：' + (save.quota ? '儲存空間不足' : save.error?.message || '未知錯誤'), 'warn');
   if (app.doc.cloud && loggedIn()) await syncNow();
   toast(app.doc.cloud && loggedIn() ? '已儲存（本機 + 伺服器）' : '已儲存到此瀏覽器');
 }
@@ -233,11 +312,17 @@ function gridDialog() {
     buttons: [{ label: '取消', value: null }, { label: '套用', class: 'primary', onClick: () => setUI({ customGrid: { on: on.checked, w: Math.max(1, +w.value | 0), h: Math.max(1, +hh.value | 0), color: c.value } }) }],
   }));
 }
-function about() {
+const fmtMB = (b) => (b / 1048576).toFixed(b < 10485760 ? 1 : 0) + ' MB';
+async function about() {
+  const si = await store.storageInfo();
+  const storeLine = si.usage != null && si.quota ? `儲存空間：已用 ${fmtMB(si.usage)} / 可用 ${fmtMB(si.quota)}` : '儲存空間：瀏覽器未提供';
+  const persistLine = si.persisted == null ? '持久儲存：不支援' : si.persisted ? '持久儲存：已啟用（瀏覽器不會自動清除）' : '持久儲存：未啟用（建議加入主畫面並定期下載備份）';
+  const lastLine = save.lastSaved ? `最後儲存：${new Date(save.lastSaved).toLocaleTimeString()}` : '最後儲存：—';
   import('./dom.js').then(({ modal }) => modal({
     title: '關於 Pixel Studio',
     body: h('div', {}, h('p', {}, `Pixel Studio ${APP_VERSION} — 觸控優先的像素繪圖與動畫工具（PWA）。`),
       h('p', { class: 'small' }, `模式：${cloud.available ? (loggedIn() ? '已連線伺服器' : '偵測到伺服器（未登入）') : '單機（資料存在此瀏覽器）'}`),
+      h('p', { class: 'small', id: 'about-storage' }, storeLine), h('p', { class: 'small' }, persistLine), h('p', { class: 'small' }, lastLine),
       h('p', { class: 'small' }, '可「加入主畫面」離線使用（需 HTTPS 或 localhost 才能離線快取）。')),
   }));
 }
@@ -341,6 +426,7 @@ async function boot() {
   document.getElementById('view').setAttribute('aria-label', '像素畫布');
   document.getElementById('toolbar').setAttribute('role', 'toolbar');
   document.getElementById('toolbar').setAttribute('aria-label', '繪圖工具');
+  buildSaveBanner();
   initView();
   bindTopbar();
   window.addEventListener('keydown', onKey);
@@ -365,6 +451,6 @@ async function boot() {
   if ('serviceWorker' in navigator && window.isSecureContext) navigator.serviceWorker.register('sw.js').catch(() => {});
   // ask the browser not to evict IndexedDB under storage pressure (Safari may otherwise clear site data)
   navigator.storage?.persist?.().catch(() => {});
-  window.__pixelStudio = { app, T, A, io, D, P, store, cloud, setUI, undo, redo };
+  window.__pixelStudio = { app, T, A, io, D, P, store, cloud, setUI, undo, redo, save, saveNow };
 }
 boot().catch((e) => { console.error(e); toast('啟動失敗：' + e.message); });

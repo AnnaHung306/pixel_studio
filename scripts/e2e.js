@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'refs', 'canvas', 'export', 'import', 'persist', 'pwa', 'cloud', 'keyboard'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'pwa', 'cloud', 'keyboard'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1066,6 +1066,66 @@ async function runProfile(name, target, base) {
     await closeModals();
     await menu('立即儲存');
     ok(await E(() => document.getElementById('toast').textContent.includes('已儲存')), 'manual save (Ctrl+S / 立即儲存) toast');
+  };
+
+  S.savestate = async () => {
+    await newProject(16, 16, 'savestate');
+    const st = () => E(() => document.getElementById('doc-title').dataset.save);
+    const waitSt = (v, t = 6000) => page.waitForFunction((v) => document.getElementById('doc-title').dataset.save === v, v, { timeout: t }).then(() => true, () => false);
+    ok(await waitSt('saved'), 'new project shows saved state', await st());
+    await setPrimary([9, 8, 7, 255]);
+    await stroke([[2, 2], [5, 2]]);
+    ok(['dirty', 'saving', 'saved'].includes(await st()), 'edit marks the document dirty/saving', await st());
+    ok(await waitSt('saved'), 'autosave returns to saved');
+    ok(await E(() => document.getElementById('save-status').textContent) === '已儲存', 'live region announces 已儲存');
+    // --- quota failure ---
+    await E(() => { window.__pixelStudio.store.faults.save = 'quota'; });
+    await stroke([[2, 6], [5, 6]]);
+    ok(await waitSt('error'), 'quota failure → error state (red dot)', await st());
+    const banner = page.locator('#save-banner');
+    ok(await banner.isVisible(), 'save-failure banner is shown');
+    ok((await banner.textContent()).includes('空間不足'), 'banner explains low storage', await banner.textContent());
+    ok(await E(() => document.getElementById('save-status').textContent) === '儲存失敗', 'live region announces failure');
+    ok(await E(() => document.getElementById('save-banner').getAttribute('role')) === 'alert', 'banner has role=alert');
+    if (prof.touch) {
+      const sizes = await E(() => [...document.querySelectorAll('#save-banner button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
+      ok(sizes.length === 3 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'banner buttons ≥ 44pt on touch', JSON.stringify(sizes));
+    }
+    await layoutOk('save banner');
+    const d = await waitDownloads(1, () => tap('#save-banner [data-act=backup]'));
+    let bk = null; try { bk = JSON.parse(d[0].buf.toString('utf8')); } catch {}
+    ok(d[0]?.name.endsWith('.pxs') && bk?.format === 'pixel-studio' && bk.meta.name === 'savestate', 'banner “download backup” saves a valid .pxs', d[0]?.name);
+    if (bk) { const px = (await import('node:buffer')).Buffer.from(Object.values(bk.cels)[0], 'base64'); const i = (6 * 16 + 3) * 4; ok(px[i] === 9 && px[i + 3] === 255, 'backup contains the unsaved stroke'); }
+    // manual save while failing reports the failure instead of “saved”
+    await menu('立即儲存');
+    ok(await E(() => document.getElementById('toast').textContent.includes('儲存失敗')), 'manual save reports failure', await E(() => document.getElementById('toast').textContent));
+    // --- retry button ---
+    await E(() => { window.__pixelStudio.store.faults.save = null; });
+    await tap('#save-banner [data-act=retry]');
+    ok(await waitSt('saved'), 'retry after freeing space → saved');
+    ok(!(await banner.isVisible()), 'banner hides after successful save');
+    // --- automatic retry with backoff ---
+    await E(() => { window.__pixelStudio.store.faults.save = 'error'; });
+    await stroke([[10, 10], [12, 10]]);
+    ok(await waitSt('error'), 'generic failure → error state');
+    ok(!(await banner.textContent()).includes('空間不足'), 'generic failure is not reported as low storage');
+    await E(() => { window.__pixelStudio.store.faults.save = null; });
+    ok(await waitSt('saved', 9000), 'automatic retry recovers without user action');
+    // --- change during an in-flight save is not lost ---
+    await E(async () => { const ps = window.__pixelStudio; const p = ps.saveNow(); ps.app.ui.primary = [1, 1, 1, 255]; window.__e2e.stroke([[14, 14], [14, 14]], 'mouse'); await p; });
+    await stroke([[14, 14], [14, 14]]);
+    ok(await waitSt('saved'), 'saved after edit during save');
+    ok(await E(() => window.__pixelStudio.save.rev === window.__pixelStudio.save.savedRev), 'last revision written (no lost edit)');
+    const id = (await meta()).id;
+    await page.reload({ waitUntil: 'load' });
+    await page.waitForFunction(() => window.__pixelStudio?.app?.doc, null, { timeout: 15000 });
+    await settle(400);
+    ok((await meta()).id === id && (await cel(3, 6)).join() === '9,8,7,255' && (await cel(11, 10)).join() === '9,8,7,255', 'strokes made during failures persist after recovery + reload');
+    // --- about: storage info ---
+    await menu('關於');
+    await settle(300);
+    ok(await page.locator('#about-storage').count() === 1, 'about shows storage usage', await E(() => document.getElementById('about-storage')?.textContent));
+    await closeModals();
   };
 
   S.pwa = async () => {
