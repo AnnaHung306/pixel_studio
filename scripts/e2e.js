@@ -1370,6 +1370,9 @@ async function runProfile(name, target, base) {
     await E(() => { for (let i = 0; i < 8; i++) window.__e2e.stroke([[i * 2, 5]], 'pen'); });
     const painted = await E(() => [0, 1, 2, 3, 4, 5, 6, 7].filter((i) => window.__e2e.cel(i * 2, 5)[3] === 255).length);
     ok(painted === 8, `8 rapid pencil taps → 8 pixels (${painted})`);
+    // B22: touchmove fired between/during rapid pen taps must stay cancelled on the canvas
+    const tmDuring = await E(() => { let prevented = 0; for (let i = 0; i < 8; i++) { window.__e2e.stroke([[i * 2, 9]], 'pen'); const ev = new Event('touchmove', { bubbles: true, cancelable: true }); document.getElementById('view').dispatchEvent(ev); if (ev.defaultPrevented) prevented++; } return prevented; });
+    ok(tmDuring === 8, `touchmove stays cancelled across 8 rapid pen taps (${tmDuring})`);
     // --- error capture ---
     await E(() => {
       window.dispatchEvent(new ErrorEvent('error', { message: 'e2e synthetic error', error: new Error('e2e synthetic error') }));
