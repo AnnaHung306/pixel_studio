@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1387,6 +1387,17 @@ async function runProfile(name, target, base) {
     await settle(200);
     ok(await E(() => document.getElementById('toast').textContent.includes('複製') || document.getElementById('toast').textContent.includes('拷貝')), 'copy gives feedback');
     await closeModals();
+  };
+
+  S.isoline = async () => {
+    await newProject(32, 24, 'isoline');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, shapeFilled: false }));
+    await setPrimary([255, 0, 77, 255]);
+    await tool('line');
+    await stroke([[2, 2], [12, 7]], prof.touch ? 'touch' : 'mouse', { shift: true });
+    ok((await cel(12, 7))[3] > 0 && (await cel(6, 4))[3] > 0 && (await cel(12, 6))[3] === 0, 'shift-line snaps to isometric 2:1');
+    await stroke([[2, 12], [10, 12]], prof.touch ? 'touch' : 'mouse', { shift: true });
+    ok((await cel(10, 12))[3] > 0, 'shift-line still snaps horizontal');
   };
 
   S.quick = async () => {

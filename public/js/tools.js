@@ -256,9 +256,15 @@ function drawShape(st, x, y, shift) {
   if (shift) {
     const dx = x1 - x0, dy = y1 - y0;
     if (st.tool === 'line') {
-      const ang = Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) * (Math.PI / 4);
+      // Shift 鎖角：0/45/90° 加等角 2:1（≈26.57°）像素線
+      const a = Math.atan2(Math.abs(dy), Math.abs(dx));
+      const cands = [0, Math.atan(0.5), Math.PI / 4, Math.atan(2), Math.PI / 2];
+      const ang = cands.reduce((b, c) => Math.abs(c - a) < Math.abs(b - a) ? c : b);
       const len = Math.max(Math.abs(dx), Math.abs(dy));
-      x1 = x0 + Math.round(Math.cos(ang) * len); y1 = y0 + Math.round(Math.sin(ang) * len);
+      const sx = Math.sign(dx) || 1, sy = Math.sign(dy) || 1;
+      if (ang === Math.atan(0.5)) { x1 = x0 + sx * len; y1 = y0 + sy * Math.round(len / 2); }
+      else if (ang === Math.atan(2)) { y1 = y0 + sy * len; x1 = x0 + sx * Math.round(len / 2); }
+      else { x1 = x0 + sx * Math.round(Math.cos(ang) * len); y1 = y0 + sy * Math.round(Math.sin(ang) * len); }
     } else {
       const s = Math.max(Math.abs(dx), Math.abs(dy));
       x1 = x0 + Math.sign(dx || 1) * s; y1 = y0 + Math.sign(dy || 1) * s;
