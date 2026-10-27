@@ -1244,6 +1244,7 @@ async function runProfile(name, target, base) {
     expectHttpErrors = 1; expectConsole = /401/;
     await page.locator('#modal-root input[type=password]').fill('wrong');
     await tap(page.locator('#modal-root .btn', { hasText: '登入' }));
+    await page.waitForFunction(() => document.getElementById('toast').textContent.includes('密碼錯誤'), null, { timeout: 5000 }).catch(() => {});
     await settle(300);
     ok(await E(() => document.getElementById('toast').textContent.includes('密碼錯誤')), 'wrong owner password rejected');
     expectHttpErrors = 0; expectConsole = null;
