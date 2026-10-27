@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1547,6 +1547,24 @@ async function runProfile(name, target, base) {
     await stroke([[4, 4], [6, 4]], 'mouse', { pressure: 0.1 });
     ok(await count() === off, 'mouse ignores pressure');
     await E(() => window.__pixelStudio.setUI({ pressure: false, brushSize: 1 }));
+  };
+  S.shadeink = async () => {
+    await newProject(16, 16, 'shadeink');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, brushSize: 1, brushShape: 'square', pressure: false, shadeInk: '' }));
+    await setPrimary([200, 80, 80, 255]);
+    await stroke([[3, 3], [6, 3]], 'pen');
+    const lum = (x, y) => E(([a, b]) => { const c = window.__e2e.cel(a, b); return c[0] + c[1] + c[2]; }, [x, y]);
+    const base = await lum(4, 3);
+    await E(() => window.__pixelStudio.setUI({ shadeInk: 'dark' }));
+    await stroke([[3, 3], [6, 3]], 'pen');
+    const dark = await lum(4, 3);
+    ok(dark < base, `shading ink darkens existing pixel (${base} -> ${dark})`);
+    await stroke([[3, 8], [6, 8]], 'pen');
+    ok(await E(() => window.__e2e.cel(4, 8)[3]) === 0, 'shading ink does not paint empty pixels');
+    await E(() => window.__pixelStudio.setUI({ shadeInk: 'light' }));
+    await stroke([[3, 3], [6, 3]], 'pen');
+    ok(await lum(4, 3) > dark, 'light shading ink brightens');
+    await E(() => window.__pixelStudio.setUI({ shadeInk: '' }));
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');
