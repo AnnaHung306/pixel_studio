@@ -307,6 +307,7 @@ function mainMenu(anchor) {
     { label: '反轉選取', key: 'Ctrl+Shift+I', action: T.invertSelection },
     { label: '水平翻轉（選取或整個 cel）', key: 'Shift+H', action: () => T.transformSelection('flipH') },
     { label: '垂直翻轉', key: 'Shift+V', action: () => T.transformSelection('flipV') },
+    { label: '全部轉換為調色盤顏色', action: A.convertToPalette },
     { label: '順時針旋轉 90°', action: () => T.transformSelection('rotCW') },
     '-',
     { header: '檢視' },

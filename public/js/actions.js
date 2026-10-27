@@ -1,6 +1,7 @@
 // Document-level actions: layers, frames, tags, canvas size, palette.
 import { app, commit, emit, setUI, activeLayer, layerIndex, W, H, toast, uid, celKey } from './state.js';
 import { dropFloating, setCel } from './tools.js';
+import { nearestPaletteColor } from './core/palettes.js';
 import { reframe, compositeLayers, blendInto, createBuffer, rgbaToHex } from './core/raster.js';
 
 export function selectFrame(i) {
@@ -230,4 +231,27 @@ export function deleteReference(id) {
 export function compositeAll(fi) {
   const m = app.doc.meta;
   return compositeLayers(m.layers.map((L) => ({ visible: L.visible, opacity: L.opacity, blend: L.blend, buf: app.doc.cels.get(celKey(L.id, m.frames[fi].id)) })), m.width, m.height);
+}
+
+// Convert every cel (all layers/frames) to the current palette (iter 27). Returns number of pixels changed.
+export function convertToPalette() {
+  const pal = app.doc.meta.palette;
+  if (!pal || !pal.length) { toast('調色盤是空的'); return 0; }
+  dropFloating();
+  let changed = 0;
+  commit('轉換為調色盤顏色', () => {
+    for (const [k, buf] of app.doc.cels) {
+      const nb = buf.slice(); const cache = new Map();
+      for (let i = 0; i < nb.length; i += 4) {
+        if (nb[i + 3] === 0) continue;
+        const key = (nb[i] << 16) | (nb[i + 1] << 8) | nb[i + 2];
+        let c = cache.get(key);
+        if (!c) { c = nearestPaletteColor([nb[i], nb[i + 1], nb[i + 2], 255], pal); cache.set(key, c); }
+        if (nb[i] !== c[0] || nb[i + 1] !== c[1] || nb[i + 2] !== c[2]) { nb[i] = c[0]; nb[i + 1] = c[1]; nb[i + 2] = c[2]; changed++; }
+      }
+      app.doc.cels.set(k, nb);
+    }
+  });
+  toast(changed ? `已轉換 ${changed} 個像素到調色盤` : '所有像素已在調色盤內');
+  return changed;
 }

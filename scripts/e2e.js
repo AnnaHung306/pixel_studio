@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1590,6 +1590,19 @@ async function runProfile(name, target, base) {
     await E(() => window.__e2e.stroke([[3, 8], [6, 8]], 'pen'));
     const q = await E(() => window.__e2e.cel(4, 8));
     ok(q[0] === 13 && q[1] === 201 && q[2] === 11, 'lock off keeps exact colour', JSON.stringify(q));
+  };
+  S.palconvert = async () => {
+    await newProject(16, 16, 'pconv');
+    await setPrimary([13, 201, 11, 255]);
+    await E(() => window.__e2e.stroke([[3, 3], [6, 3]], 'pen'));
+    ok(await E(() => window.__e2e.cel(4, 3)[0]) === 13, 'exact colour drawn before convert');
+    await menu('全部轉換為調色盤顏色');
+    const px = await E(() => window.__e2e.cel(4, 3));
+    const pal = await E(() => window.__pixelStudio.app.doc.meta.palette.slice());
+    ok(px[3] === 255 && pal.some((hx) => [1, 3, 5].every((i, k) => parseInt(hx.slice(i, i + 2), 16) === px[k])), 'convert snaps pixels to palette', JSON.stringify(px));
+    ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent pixels stay transparent');
+    await E(() => window.__pixelStudio.undo());
+    ok(await E(() => window.__e2e.cel(4, 3)[0]) === 13, 'undo restores original colour');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');
