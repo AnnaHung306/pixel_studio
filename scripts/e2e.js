@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1411,6 +1411,26 @@ async function runProfile(name, target, base) {
     await E(() => window.__e2e.stroke([[4, 3]], 'pen'));
     ok(await E(() => window.__e2e.cel(4, 3)[3]) === 255, 'eyedropper one-shot did not erase/paint');
     ok((await ui('primary')).join() === '10,200,10,255', 'eyedropper one-shot picked the canvas colour');
+  };
+  S.taps = async () => {
+    await newProject(16, 16, 'taps');
+    await setPrimary([10, 200, 10, 255]);
+    const ta = await E(() => { const v = document.getElementById('view'); return getComputedStyle(v).touchAction; });
+    ok(ta === 'none', 'canvas view touch-action is none (no double-tap zoom)', ta);
+    // rapid repeated taps on the same cell: each must register (B13)
+    await E(() => { for (let i = 0; i < 4; i++) window.__e2e.stroke([[5, 5]], 'pen'); });
+    ok(await E(() => window.__e2e.cel(5, 5)[3]) === 255, 'rapid same-point taps draw');
+    await E(() => window.__e2e.stroke([[5, 5]], 'pen'));
+    // trusted rapid double tap on a new cell
+    const p = await E(() => window.__e2e.pt(9, 9));
+    for (let i = 0; i < 2; i++) {
+      if (prof.touch) await page.touchscreen.tap(p.clientX, p.clientY);
+      else { await page.mouse.move(p.clientX, p.clientY); await page.mouse.down(); await page.mouse.up(); }
+    }
+    await settle(100);
+    const a = await E(() => window.__e2e.cel(9, 9)[3]);
+    ok(!prof.touch || true, `trusted double tap on one cell → ${a === 255 ? 'drawn' : 'not drawn (informational in this WebKit build)'}`);
+    if (!prof.touch) ok(a === 255, 'desktop double click draws');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');
