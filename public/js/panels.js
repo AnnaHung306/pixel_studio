@@ -4,7 +4,7 @@ import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confir
 import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, dropFloating, cancelFloating } from './tools.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
-import { PALETTES, parsePaletteFile, paletteToHex, paletteToGpl, makeRamp } from './core/palettes.js';
+import { PALETTES, parsePaletteFile, paletteToHex, paletteToGpl, makeRamp, shadeStep } from './core/palettes.js';
 import { fitView } from './view.js';
 
 // ---------- pixel icons ----------
@@ -131,6 +131,7 @@ function hsvToRgb(hh, s, v) {
   return [f(5), f(3), f(1)];
 }
 const curColor = () => (app.ui.activeSlot === 'secondary' ? app.ui.secondary : app.ui.primary);
+export function shade(dir) { setCur(shadeStep(curColor(), dir)); }
 function setCur(c) { setUI({ [app.ui.activeSlot === 'secondary' ? 'secondary' : 'primary']: c }); }
 
 let ce = null;
@@ -162,7 +163,8 @@ export function renderColorEditor() {
     drag(sv, (x, y) => { hsv.s = x; hsv.v = 1 - y; apply(); });
     drag(hue, (x) => { hsv.h = x * 359.9; apply(); });
     drag(alpha, (x) => { hsv.a = Math.round(x * 255); apply(); });
-    root.append(sv, hue, alpha, h('div', { class: 'ce-row' }, cur, hex, addBtn));
+    root.append(sv, hue, alpha, h('div', { class: 'ce-row' }, cur, hex, addBtn),
+      h('div', { class: 'ce-row' }, h('button', { class: 'sb', title: '較暗一階（快捷鍵 <）', onclick: () => shade(-1) }, '◐ 較暗'), h('button', { class: 'sb', title: '較亮一階（快捷鍵 >）', onclick: () => shade(1) }, '◑ 較亮')));
     ce = { sv, hue, alpha, hex, cur };
   }
   draw();

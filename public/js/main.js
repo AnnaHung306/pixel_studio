@@ -438,6 +438,8 @@ function onKey(e) {
   if (e.shiftKey && k === 'n') { done(); A.addLayer(); return; }
   if (toolKeys[k] && !e.shiftKey) { done(); P.setTool(toolKeys[k]); return; }
   switch (e.key) {
+    case '<': done(); P.shade(-1); return;
+    case '>': done(); P.shade(1); return;
     case 'x': case 'X': done(); P.swapColors(); return;
     case '[': done(); setUI({ brushSize: Math.max(1, app.ui.brushSize - 1) }); return;
     case ']': done(); setUI({ brushSize: Math.min(32, app.ui.brushSize + 1) }); return;

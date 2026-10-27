@@ -50,6 +50,15 @@ export function paletteToGpl(colors, name = 'Pixel Studio') {
   return lines.join('\n') + '\n';
 }
 
+// Shade step (B18 part 2): next darker (dir<0) or lighter (dir>0) color along a hue-shifted ramp. rgba array in/out.
+export function shadeStep(rgba, dir) {
+  const hex = '#' + [0, 1, 2].map((i) => rgba[i].toString(16).padStart(2, '0')).join('');
+  const r = makeRamp(hex, 9), mid = 4, c = r[mid + (dir < 0 ? -1 : 1)];
+  const out = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16));
+  const same = out.every((v, i) => v === rgba[i]);
+  return same ? rgba.slice() : [...out, rgba[3]];
+}
+
 // Shading ramp (B18): n colors dark→light around `hex`, with hue shift (shadows toward blue/purple, highlights toward yellow).
 export function makeRamp(hex, n = 7) {
   n = Math.max(3, Math.min(15, n | 0));
