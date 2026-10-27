@@ -49,3 +49,28 @@ export function paletteToGpl(colors, name = 'Pixel Studio') {
   }
   return lines.join('\n') + '\n';
 }
+
+// Shading ramp (B18): n colors dark→light around `hex`, with hue shift (shadows toward blue/purple, highlights toward yellow).
+export function makeRamp(hex, n = 7) {
+  n = Math.max(3, Math.min(15, n | 0));
+  const h6 = String(hex).replace('#', '');
+  const r = parseInt(h6.slice(0, 2), 16) / 255, g = parseInt(h6.slice(2, 4), 16) / 255, b = parseInt(h6.slice(4, 6), 16) / 255;
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+  let H = 0;
+  if (d) H = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  H *= 60;
+  const L0 = (mx + mn) / 2, S0 = d ? d / (1 - Math.abs(2 * L0 - 1)) : 0;
+  const mid = (n - 1) / 2, out = [];
+  for (let i = 0; i < n; i++) {
+    const t = (i - mid) / mid; // -1 dark … +1 light
+    const L = Math.min(0.95, Math.max(0.06, L0 + t * (t < 0 ? L0 - 0.08 : 0.93 - L0) * 0.9));
+    const S = Math.min(1, Math.max(0, S0 * (1 - 0.25 * Math.abs(t)) + (S0 ? 0 : 0)));
+    const hh = (H + (t < 0 ? 1 : -1) * Math.abs(t) * 20 + 360) % 360;
+    const c = (1 - Math.abs(2 * L - 1)) * S, x = c * (1 - Math.abs(((hh / 60) % 2) - 1)), m = L - c / 2;
+    const [rr, gg, bb] = hh < 60 ? [c, x, 0] : hh < 120 ? [x, c, 0] : hh < 180 ? [0, c, x] : hh < 240 ? [0, x, c] : hh < 300 ? [x, 0, c] : [c, 0, x];
+    const f = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+    out.push('#' + f(rr) + f(gg) + f(bb) + 'ff');
+  }
+  out[(n - 1) >> 1] = '#' + h6.slice(0, 6).toLowerCase() + 'ff';
+  return out;
+}

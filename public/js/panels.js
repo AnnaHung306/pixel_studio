@@ -4,7 +4,7 @@ import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confir
 import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, dropFloating, cancelFloating } from './tools.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
-import { PALETTES, parsePaletteFile, paletteToHex, paletteToGpl } from './core/palettes.js';
+import { PALETTES, parsePaletteFile, paletteToHex, paletteToGpl, makeRamp } from './core/palettes.js';
 import { fitView } from './view.js';
 
 // ---------- pixel icons ----------
@@ -232,6 +232,7 @@ function paletteMenu(anchor) {
     { header: '載入預設調色盤' },
     ...Object.values(PALETTES).map((p) => ({ label: `${p.name}（${p.colors.length} 色）`, action: () => A.setPalette(p.colors.slice(), `調色盤：${p.name}`) })),
     '-',
+    { label: '以目前顏色加入色階（7 色，含色相偏移）', action: addRamp },
     { label: '從畫面擷取所有顏色', action: extractPalette },
     { label: '匯入 .hex / .gpl…', action: importPalette },
     { label: '匯出 .hex', action: () => download(new Blob([paletteToHex(app.doc.meta.palette)], { type: 'text/plain' }), `${app.doc.meta.name}.hex`) },
@@ -246,6 +247,14 @@ async function importPalette() {
   if (!cols.length) return toast('檔案中找不到顏色');
   A.setPalette(cols, '匯入調色盤');
   toast(`已匯入 ${cols.length} 色`);
+}
+function addRamp() {
+  const ramp = makeRamp(rgbaToHex(curColor()).slice(0, 7), 7);
+  const have = new Set(app.doc.meta.palette);
+  const add = ramp.filter((c) => !have.has(c));
+  if (!add.length) return toast('色階已在調色盤中');
+  A.setPalette([...app.doc.meta.palette, ...add], '加入色階');
+  toast(`已加入 ${add.length} 個色階顏色`);
 }
 function extractPalette() {
   const set = new Set(app.doc.meta.palette);
