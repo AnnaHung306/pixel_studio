@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1603,6 +1603,17 @@ async function runProfile(name, target, base) {
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent pixels stay transparent');
     await E(() => window.__pixelStudio.undo());
     ok(await E(() => window.__e2e.cel(4, 3)[0]) === 13, 'undo restores original colour');
+  };
+  S.invert = async () => {
+    await newProject(16, 16, 'inv');
+    await setPrimary([10, 200, 30, 255]);
+    await E(() => window.__e2e.stroke([[3, 3], [6, 3]], 'pen'));
+    await menu('反相顏色');
+    const px = await E(() => window.__e2e.cel(4, 3));
+    ok(px[0] === 245 && px[1] === 55 && px[2] === 225 && px[3] === 255, 'invert flips RGB, keeps alpha', JSON.stringify(px));
+    ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent pixels stay transparent');
+    await E(() => window.__pixelStudio.undo());
+    ok(await E(() => window.__e2e.cel(4, 3)[0]) === 10, 'undo restores colour');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');

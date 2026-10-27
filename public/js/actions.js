@@ -255,3 +255,21 @@ export function convertToPalette() {
   toast(changed ? `已轉換 ${changed} 個像素到調色盤` : '所有像素已在調色盤內');
   return changed;
 }
+
+// Invert RGB of every opaque pixel in all cels (iter 28). Returns pixels changed.
+export function invertColors() {
+  dropFloating();
+  let changed = 0;
+  commit('反相顏色', () => {
+    for (const [k, buf] of app.doc.cels) {
+      const nb = buf.slice();
+      for (let i = 0; i < nb.length; i += 4) {
+        if (nb[i + 3] === 0) continue;
+        nb[i] = 255 - nb[i]; nb[i + 1] = 255 - nb[i + 1]; nb[i + 2] = 255 - nb[i + 2]; changed++;
+      }
+      app.doc.cels.set(k, nb);
+    }
+  });
+  toast(changed ? `已反相 ${changed} 個像素` : '沒有可反相的像素');
+  return changed;
+}
