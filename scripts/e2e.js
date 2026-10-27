@@ -1564,6 +1564,12 @@ async function runProfile(name, target, base) {
     await E(() => window.__pixelStudio.setUI({ shadeInk: 'light' }));
     await stroke([[3, 3], [6, 3]], 'pen');
     ok(await lum(4, 3) > dark, 'light shading ink brightens');
+    await setPrimary([10, 200, 10, 255]);
+    await E(() => window.__pixelStudio.setUI({ shadeInk: 'recolor' }));
+    await stroke([[3, 3], [6, 3]], 'pen');
+    await stroke([[3, 8], [6, 8]], 'pen');
+    ok(await E(() => { const c = window.__e2e.cel(4, 3); return c[1] === 200 && c[0] === 10 && c[3] === 255; }), 'recolor ink changes existing pixel colour');
+    ok(await E(() => window.__e2e.cel(4, 8)[3]) === 0, 'recolor ink does not paint empty pixels');
     await E(() => window.__pixelStudio.setUI({ shadeInk: '' }));
   };
   S.focus = async () => {
