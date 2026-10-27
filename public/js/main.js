@@ -314,6 +314,10 @@ function mainMenu(anchor) {
     { label: '放大 / 縮小', key: '+ / −', action: () => zoomAt(2) },
     { label: app.ui.showGrid ? '隱藏像素格線' : '顯示像素格線', key: "Ctrl+'", action: () => setUI({ showGrid: !app.ui.showGrid }) },
     { label: '自訂格線…', action: gridDialog },
+    { label: '長按吸色：' + (app.ui.longPressMs ? (app.ui.longPressMs / 1000) + ' 秒（點此切換）' : '關閉（點此切換）'), action: () => {
+      const seq = [400, 600, 900, 0]; const n = seq[(seq.indexOf(app.ui.longPressMs) + 1) % seq.length];
+      setUI({ longPressMs: n }); toast(n ? `長按吸色：${n / 1000} 秒` : '長按吸色：已關閉');
+    } },
     { label: '專注模式（畫布最大化）', key: 'Tab', action: () => toggleFocus() },
     '-',
     { label: '伺服器 · 雲端 · AI API…', action: () => D.serverDialog() },
@@ -511,8 +515,8 @@ async function boot() {
   on('ui', () => {
     clearTimeout(boot.pt);
     boot.pt = setTimeout(() => {
-      const { primary, secondary, brushSize, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither } = app.ui;
-      store.setSetting('uiPrefs', { primary, secondary, brushSize, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither });
+      const { primary, secondary, brushSize, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither, longPressMs } = app.ui;
+      store.setSetting('uiPrefs', { primary, secondary, brushSize, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither, longPressMs });
     }, 500);
   });
   let doc = null;

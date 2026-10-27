@@ -301,7 +301,7 @@ let lpTimer = null;
 function clearLongPress() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
 function armLongPress(e, p) {
   clearLongPress();
-  if (e.pointerType === 'mouse' || !['pencil', 'eraser'].includes(app.ui.tool) || app.ui.oneShot) return;
+  if (e.pointerType === 'mouse' || !['pencil', 'eraser'].includes(app.ui.tool) || app.ui.oneShot || !app.ui.longPressMs) return;
   const id = e.pointerId;
   lpTimer = setTimeout(() => {
     lpTimer = null;
@@ -312,7 +312,7 @@ function armLongPress(e, p) {
     tools.down(d, inf); tools.up(d, inf);
     mode = null; app.busy = false; emit('idle');
     emit('toast', '已吸取顏色（長按）');
-  }, 600);
+  }, app.ui.longPressMs);
 }
 
 function onMove(e) {

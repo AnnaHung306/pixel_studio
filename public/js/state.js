@@ -15,7 +15,7 @@ export const app = {
     layerId: null, frame: 0, tool: 'pencil', prevTool: null,
     primary: [0, 0, 0, 255], secondary: [255, 255, 255, 255], activeSlot: 'primary',
     brushSize: 1, brushShape: 'square', pixelPerfect: false, dither: '', fillContiguous: true, shapeFilled: false,
-    symX: false, symY: false, sampleLayer: false,
+    symX: false, symY: false, longPressMs: 600, sampleLayer: false,
     zoom: 8, panX: 0, panY: 0, showGrid: true,
     customGrid: { on: false, w: 8, h: 8, color: '#5b8cff' },
     onion: { on: false, prev: 1, next: 1, opacity: 0.4, tint: true, prevColor: '#ff3030', nextColor: '#3080ff' },

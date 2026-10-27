@@ -1485,6 +1485,24 @@ async function runProfile(name, target, base) {
     await setPrimary([200, 10, 10, 255]);
     await E(() => window.__e2e.stroke([[8, 8]], 'pen'));
     ok(await E(() => window.__e2e.cel(8, 8)[0]) === 200, 'short tap still draws');
+    // disabled: holding paints instead of picking
+    await E(() => { window.__pixelStudio.app.ui.longPressMs = 0; });
+    await setPrimary([5, 5, 250, 255]);
+    await E(() => window.__lp('pointerdown'));
+    await settle(900);
+    await E(() => window.__lp('pointerup'));
+    await settle(100);
+    ok(await E(() => window.__pixelStudio.app.ui.primary[2]) === 250, 'long press disabled: colour not picked');
+    // shorter delay (400ms) picks sooner
+    await setPrimary([10, 200, 10, 255]);
+    await E(() => window.__e2e.stroke([[3, 3]], 'pen'));
+    await setPrimary([5, 5, 250, 255]);
+    await E(() => { window.__pixelStudio.app.ui.longPressMs = 400; });
+    await E(() => window.__lp('pointerdown'));
+    await settle(650);
+    const p4 = await E(() => window.__pixelStudio.app.ui.primary);
+    await E(() => window.__lp('pointerup'));
+    ok(p4[0] === 10 && p4[1] === 200, '400ms delay picks the colour', JSON.stringify(p4));
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');
