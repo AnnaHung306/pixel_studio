@@ -1570,6 +1570,12 @@ async function runProfile(name, target, base) {
     await stroke([[3, 8], [6, 8]], 'pen');
     ok(await E(() => { const c = window.__e2e.cel(4, 3); return c[1] === 200 && c[0] === 10 && c[3] === 255; }), 'recolor ink changes existing pixel colour');
     ok(await E(() => window.__e2e.cel(4, 8)[3]) === 0, 'recolor ink does not paint empty pixels');
+    await setPrimary([250, 0, 0, 255]);
+    await E(() => window.__pixelStudio.setUI({ shadeInk: 'behind' }));
+    await stroke([[3, 3], [6, 3]], 'pen');
+    await stroke([[3, 8], [6, 8]], 'pen');
+    ok(await E(() => { const c = window.__e2e.cel(4, 3); return c[1] === 200 && c[0] === 10; }), 'behind ink keeps existing pixels');
+    ok(await E(() => window.__e2e.cel(4, 8)[0]) === 250, 'behind ink paints empty pixels');
     await E(() => window.__pixelStudio.setUI({ shadeInk: '' }));
   };
   S.focus = async () => {
