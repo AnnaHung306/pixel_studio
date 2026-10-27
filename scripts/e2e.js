@@ -1431,6 +1431,18 @@ async function runProfile(name, target, base) {
     const a = await E(() => window.__e2e.cel(9, 9)[3]);
     ok(!prof.touch || true, `trusted double tap on one cell → ${a === 255 ? 'drawn' : 'not drawn (informational in this WebKit build)'}`);
     if (!prof.touch) ok(a === 255, 'desktop double click draws');
+    // pointercancel mid-stroke (system gesture / palm) must end the stroke cleanly (B19)
+    const r = await E(() => {
+      const c = document.getElementById('view'); const q = window.__e2e.pt(12, 12); const q2 = window.__e2e.pt(13, 12);
+      const mk = (t, pt) => new PointerEvent(t, { pointerId: 77, pointerType: 'pen', isPrimary: true, clientX: pt.clientX, clientY: pt.clientY, buttons: t === 'pointerup' || t === 'pointercancel' ? 0 : 1, bubbles: true, cancelable: true });
+      c.dispatchEvent(mk('pointerdown', q)); c.dispatchEvent(mk('pointermove', q2)); c.dispatchEvent(mk('pointercancel', q2));
+      return { busy: !!window.__pixelStudio.app.busy };
+    });
+    await settle(100);
+    ok(r.busy === false, 'pointercancel leaves app idle', JSON.stringify(r));
+    ok(await E(() => window.__e2e.cel(12, 12)[3]) === 0, 'cancelled stroke paints nothing');
+    await E(() => window.__e2e.stroke([[14, 14]], 'pen'));
+    ok(await E(() => window.__e2e.cel(14, 14)[3]) === 255, 'drawing works after a cancelled stroke');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');
