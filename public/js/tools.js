@@ -85,6 +85,7 @@ export function down(pt, info) {
   let tool = app.ui.tool;
   if (info.alt && ['pencil', 'eraser', 'fill', 'line', 'rect', 'ellipse'].includes(tool)) tool = 'eyedropper';
   if (info.ctrl && ['pencil', 'eraser', 'fill', 'line', 'rect', 'ellipse', 'eyedropper', 'select', 'lasso'].includes(tool) && !app.floating) tool = 'move';
+  if (app.ui.oneShot && ['pencil', 'eraser', 'fill', 'line', 'rect', 'ellipse'].includes(tool)) { tool = app.ui.oneShot; stroke = null; app.__oneShotUsed = true; }
   const secondary = info.button === 2;
   const color = secondary ? app.ui.secondary : app.ui.primary;
   switch (tool) {
@@ -214,6 +215,7 @@ export function up(pt, info) {
   if (!stroke) return;
   const st = stroke;
   stroke = null;
+  if (app.__oneShotUsed) { app.__oneShotUsed = false; setUI({ oneShot: null }); }
   switch (st.tool) {
     case 'pencil': case 'eraser': case 'line': case 'rect': case 'ellipse': {
       const label = { pencil: '鉛筆', eraser: '橡皮擦', line: '直線', rect: '矩形', ellipse: '橢圓' }[st.tool];

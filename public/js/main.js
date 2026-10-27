@@ -259,6 +259,10 @@ function bindTopbar() {
   $('btn-zoom').onclick = () => fitView();
   $('btn-grid').onclick = () => setUI({ showGrid: !app.ui.showGrid });
   $('btn-focus').onclick = () => toggleFocus();
+  const oneShot = (id) => setUI({ oneShot: app.ui.oneShot === id ? null : id });
+  $('qt-pick').onclick = () => oneShot('eyedropper');
+  $('qt-erase').onclick = () => oneShot('eraser');
+  on('ui', () => { for (const [b, t] of [['qt-pick', 'eyedropper'], ['qt-erase', 'eraser']]) { const el = $(b); el.classList.toggle('on', app.ui.oneShot === t); el.setAttribute('aria-pressed', String(app.ui.oneShot === t)); } });
   $('fp-exit').onclick = () => toggleFocus(false);
   $('fp-undo').onclick = () => undo();
   $('fp-redo').onclick = () => redo();

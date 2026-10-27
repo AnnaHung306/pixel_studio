@@ -275,3 +275,8 @@ html.touch input[type=checkbox] { width: 22px; height: 22px; }
 #app.focus #topbar, #app.focus #optionsbar, #app.focus #sidepanel, #app.focus #timeline, #app.focus #notice-bar { display: none !important; }
 #app.focus #focus-pill { display: flex; }
 #btn-focus.on { background: var(--acc2); }
+
+/* 1.7.0 quick one-shot tools */
+#quick-tools { position: absolute; right: 8px; top: 8px; z-index: 6; display: flex; flex-direction: column; gap: 6px; }
+#quick-tools .ib { min-width: 44px; min-height: 44px; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; opacity: .92; }
+#quick-tools .ib.on { background: var(--accent, #4a8cff); color: #fff; }

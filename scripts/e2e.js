@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1389,6 +1389,29 @@ async function runProfile(name, target, base) {
     await closeModals();
   };
 
+  S.quick = async () => {
+    await newProject(16, 16, 'quick');
+    await setPrimary([10, 200, 10, 255]);
+    await E(() => window.__e2e.stroke([[3, 3], [4, 3]], 'pen'));
+    ok(await E(() => window.__e2e.cel(3, 3)[3]) === 255, 'baseline pencil draws');
+    if (prof.touch) {
+      const sizes = await E(() => [...document.querySelectorAll('#quick-tools button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
+      ok(sizes.length === 2 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'quick buttons ≥ 44pt', JSON.stringify(sizes));
+    }
+    await tap('#qt-erase');
+    ok(await E(() => document.getElementById('qt-erase').getAttribute('aria-pressed')) === 'true', 'erase armed');
+    await E(() => window.__e2e.stroke([[3, 3]], 'pen'));
+    ok(await E(() => window.__e2e.cel(3, 3)[3]) === 0, 'one-shot eraser erases');
+    ok(await E(() => window.__e2e.cel(4, 3)[3]) === 255, 'neighbour untouched');
+    ok(await E(() => document.getElementById('qt-erase').getAttribute('aria-pressed')) === 'false', 'erase disarmed after one stroke');
+    await E(() => window.__e2e.stroke([[6, 6]], 'pen'));
+    ok(await E(() => window.__e2e.cel(6, 6)[3]) === 255, 'tool returns to pencil');
+    await setPrimary([200, 10, 10, 255]);
+    await tap('#qt-pick');
+    await E(() => window.__e2e.stroke([[4, 3]], 'pen'));
+    ok(await E(() => window.__e2e.cel(4, 3)[3]) === 255, 'eyedropper one-shot did not erase/paint');
+    ok((await ui('primary')).join() === '10,200,10,255', 'eyedropper one-shot picked the canvas colour');
+  };
   S.focus = async () => {
     await newProject(16, 16, 'focus');
     const area = () => E(() => { const r = document.getElementById('stage').getBoundingClientRect(); return Math.round(r.width * r.height); });
