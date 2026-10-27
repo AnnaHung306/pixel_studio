@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1577,6 +1577,19 @@ async function runProfile(name, target, base) {
     ok(await E(() => { const c = window.__e2e.cel(4, 3); return c[1] === 200 && c[0] === 10; }), 'behind ink keeps existing pixels');
     ok(await E(() => window.__e2e.cel(4, 8)[0]) === 250, 'behind ink paints empty pixels');
     await E(() => window.__pixelStudio.setUI({ shadeInk: '' }));
+  };
+  S.palettelock = async () => {
+    await newProject(16, 16, 'plock');
+    const pal = await E(() => window.__pixelStudio.app.doc.meta.palette.slice());
+    await setPrimary([13, 201, 11, 255]);
+    await E(() => window.__pixelStudio.setUI({ paletteLock: true }));
+    await E(() => window.__e2e.stroke([[3, 3], [6, 3]], 'pen'));
+    const px = await E(() => window.__e2e.cel(4, 3));
+    ok(px[3] === 255 && pal.some((hx) => [1, 3, 5].every((i, k) => parseInt(hx.slice(i, i + 2), 16) === px[k])), 'palette lock snaps colour to a palette entry', JSON.stringify(px));
+    await E(() => window.__pixelStudio.setUI({ paletteLock: false }));
+    await E(() => window.__e2e.stroke([[3, 8], [6, 8]], 'pen'));
+    const q = await E(() => window.__e2e.cel(4, 8));
+    ok(q[0] === 13 && q[1] === 201 && q[2] === 11, 'lock off keeps exact colour', JSON.stringify(q));
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');

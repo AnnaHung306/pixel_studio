@@ -23,3 +23,11 @@ test('shadeStep: darker/lighter change luminance, keep alpha, stay valid', () =>
   assert.equal(d[3], 128); assert.equal(l[3], 128);
   for (const v of [...d, ...l]) assert.ok(v >= 0 && v <= 255);
 });
+
+import { nearestPaletteColor } from '../../public/js/core/palettes.js';
+test('nearestPaletteColor: picks nearest, keeps alpha, handles empty', () => {
+  const pal = ['#ff0000ff', '#00ff00ff', '#0000ffff'];
+  assert.deepEqual(nearestPaletteColor([250, 10, 10, 128], pal), [255, 0, 0, 128]);
+  assert.deepEqual(nearestPaletteColor([10, 20, 240, 255], pal), [0, 0, 255, 255]);
+  assert.deepEqual(nearestPaletteColor([1, 2, 3, 255], []), [1, 2, 3, 255]);
+});

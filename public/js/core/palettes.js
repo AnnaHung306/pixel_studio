@@ -83,3 +83,17 @@ export function makeRamp(hex, n = 7) {
   out[(n - 1) >> 1] = '#' + h6.slice(0, 6).toLowerCase() + 'ff';
   return out;
 }
+
+// Palette lock (iter 26): nearest palette color to rgba (weighted RGB distance). Alpha is kept. Empty palette → same color.
+export function nearestPaletteColor(rgba, palette) {
+  if (!palette || !palette.length) return rgba.slice();
+  let best = null, bd = Infinity;
+  for (const hx of palette) {
+    const v = [1, 3, 5].map((i) => parseInt(hx.slice(i, i + 2), 16));
+    if (v.some(Number.isNaN)) continue;
+    const rm = (v[0] + rgba[0]) / 2, dr = v[0] - rgba[0], dg = v[1] - rgba[1], db = v[2] - rgba[2];
+    const d = (2 + rm / 256) * dr * dr + 4 * dg * dg + (2 + (255 - rm) / 256) * db * db;
+    if (d < bd) { bd = d; best = v; }
+  }
+  return best ? [...best, rgba[3]] : rgba.slice();
+}

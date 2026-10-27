@@ -76,7 +76,7 @@ export function renderOptions() {
   if (t === 'pencil' || t === 'eraser') {
     add(sizeCtl(), shapeCtl(), tog('✎ 壓感', 'pressure', 'Apple Pencil 壓力控制筆刷大小（1 ～ 筆刷大小）'));
     if (t === 'pencil') add(tog('像素完美', 'pixelPerfect', '去除 L 形轉角（1px 筆刷時有效）'));
-    add(dither(), sym());
+    add(dither(), sym(), tog('🔒 鎖定調色盤', 'paletteLock', '只用調色盤顏色：繪圖色自動吸附到最近的調色盤顏色'));
     if (t === 'pencil') add(h('label', {}, '墨水', (() => { const s = h('select', { onchange: () => setUI({ shadeInk: s.value }), title: '色階墨水：在已有顏色上畫＝變暗／變亮一階' }, [['', '正常'], ['dark', '加深'], ['light', '加亮'], ['recolor', '換色（只改已有像素）'], ['behind', '墊底（只畫在空白處）']].map(([v, l]) => h('option', { value: v, selected: (app.ui.shadeInk || '') === v }, l))); return s; })()));
   } else if (t === 'line' || t === 'rect' || t === 'ellipse') {
     add(sizeCtl());

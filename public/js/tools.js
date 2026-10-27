@@ -4,7 +4,7 @@ import {
   createBuffer, setPixel, getPixel, linePoints, rectPoints, ellipsePoints, floodFill, ditherHit, polygonMask,
   pasteOver, flipBuffer, rotateBuffer, reframe, isEmpty, compositeLayers, rgbaToHex, celKey, b64ToBytes,
 } from './core/raster.js';
-import { shadeStep } from './core/palettes.js';
+import { shadeStep, nearestPaletteColor } from './core/palettes.js';
 
 export const TOOLS = [
   { id: 'pencil', label: '鉛筆', key: 'B' },
@@ -109,7 +109,8 @@ export function down(pt, info) {
   if (info.ctrl && ['pencil', 'eraser', 'fill', 'line', 'rect', 'ellipse', 'eyedropper', 'select', 'lasso'].includes(tool) && !app.floating) tool = 'move';
   if (app.ui.oneShot && ['pencil', 'eraser', 'fill', 'line', 'rect', 'ellipse'].includes(tool)) { tool = app.ui.oneShot; stroke = null; app.__oneShotUsed = true; }
   const secondary = info.button === 2;
-  const color = secondary ? app.ui.secondary : app.ui.primary;
+  let color = secondary ? app.ui.secondary : app.ui.primary;
+  if (app.ui.paletteLock && color[3] > 0) color = nearestPaletteColor(color, app.doc.meta.palette);
   switch (tool) {
     case 'pencil': case 'eraser': {
       if (!editable()) return;
