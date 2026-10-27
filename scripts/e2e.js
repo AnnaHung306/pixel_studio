@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1516,6 +1516,17 @@ async function runProfile(name, target, base) {
     const p4 = await E(() => window.__pixelStudio.app.ui.primary);
     await E(() => window.__lp('pointerup'));
     ok(p4[0] === 10 && p4[1] === 200, '400ms delay picks the colour', JSON.stringify(p4));
+  };
+  S.tile = async () => {
+    await newProject(8, 8, 'tile');
+    await setPrimary([200, 20, 20, 255]);
+    await E(() => window.__e2e.stroke([[0, 0], [1, 0]], 'pen'));
+    await menu('無縫拼貼預覽');
+    await settle(200);
+    await layoutOk('tile preview on');
+    await menu('關閉無縫拼貼預覽');
+    await settle(100);
+    ok(await E(() => window.__e2e.cel(0, 0)[3]) === 255, 'menu toggles tile preview on/off; drawing intact');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');

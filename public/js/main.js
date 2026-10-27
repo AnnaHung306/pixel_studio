@@ -313,6 +313,7 @@ function mainMenu(anchor) {
     { label: '符合視窗', key: '0', action: fitView },
     { label: '放大 / 縮小', key: '+ / −', action: () => zoomAt(2) },
     { label: app.ui.showGrid ? '隱藏像素格線' : '顯示像素格線', key: "Ctrl+'", action: () => setUI({ showGrid: !app.ui.showGrid }) },
+    { label: app.ui.tilePreview ? '關閉無縫拼貼預覽' : '無縫拼貼預覽（周圍 8 格）', action: () => setUI({ tilePreview: !app.ui.tilePreview }) },
     { label: '自訂格線…', action: gridDialog },
     { label: '長按吸色：' + (app.ui.longPressMs ? (app.ui.longPressMs / 1000) + ' 秒（點此切換）' : '關閉（點此切換）'), action: () => {
       const seq = [400, 600, 900, 0]; const n = seq[(seq.indexOf(app.ui.longPressMs) + 1) % seq.length];

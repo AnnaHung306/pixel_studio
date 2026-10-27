@@ -156,6 +156,11 @@ function render() {
 
   // current frame
   bufToCanvas(frameComposite(app.ui.frame), w, h, docCanvas);
+  if (app.ui.tilePreview) {
+    ctx.globalAlpha = 0.5;
+    for (let ty = -1; ty <= 1; ty++) for (let tx = -1; tx <= 1; tx++) if (tx || ty) ctx.drawImage(docCanvas, tx * w * z, ty * h * z, w * z, h * z);
+    ctx.globalAlpha = 1;
+  }
   ctx.drawImage(docCanvas, 0, 0, w * z, h * z);
   emit('rendered', docCanvas);
 
