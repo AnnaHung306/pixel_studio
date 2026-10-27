@@ -511,8 +511,8 @@ async function boot() {
   on('ui', () => {
     clearTimeout(boot.pt);
     boot.pt = setTimeout(() => {
-      const { primary, secondary, brushSize, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled } = app.ui;
-      store.setSetting('uiPrefs', { primary, secondary, brushSize, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled });
+      const { primary, secondary, brushSize, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither } = app.ui;
+      store.setSetting('uiPrefs', { primary, secondary, brushSize, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither });
     }, 500);
   });
   let doc = null;

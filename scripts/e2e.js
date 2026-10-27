@@ -1079,12 +1079,16 @@ async function runProfile(name, target, base) {
     await setPrimary([1, 2, 3, 255]);
     await stroke([[4, 4], [8, 4]]);
     const id = (await meta()).id;
+    await page.evaluate(() => window.__pixelStudio.setUI({ symX: true, symY: true, dither: 'checker' }));
     await sleep(1300); // autosave debounce 800ms
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(() => window.__pixelStudio?.app?.doc, null, { timeout: 15000 });
     await settle(400);
     ok((await meta()).id === id && (await cel(6, 4)).join() === '1,2,3,255', 'IndexedDB autosave survives reload');
     ok((await ui('primary')).join() === '1,2,3,255', 'UI prefs (colour) restored');
+    ok((await ui('symX')) === true && (await ui('symY')) === true && (await ui('dither')) === 'checker', 'symmetry + dither prefs restored');
+    await page.evaluate(() => window.__pixelStudio.setUI({ symX: false, symY: false, dither: '' }));
+    await sleep(700);
     // project browser
     await menu('專案列表');
     await settle(400);
@@ -1253,8 +1257,12 @@ async function runProfile(name, target, base) {
     ok(await E(() => document.getElementById('cloud-dot').className.includes('on')), 'upload + live sync (green dot)');
     const pid = (await meta()).id;
     await stroke([[0, 0], [2, 0]]);
-    await sleep(900);
-    const own = await (await fetch(`${base}/api/owner/projects/${pid}`, { headers: { Authorization: 'Bearer ' + (await E(() => window.__pixelStudio.cloud.token)) } })).json();
+    let own = {};
+    for (let i = 0; i < 12; i++) {
+      await sleep(500);
+      own = await (await fetch(`${base}/api/owner/projects/${pid}`, { headers: { Authorization: 'Bearer ' + (await E(() => window.__pixelStudio.cloud.token)) } })).json();
+      if (Object.keys(own.cels || {}).length >= 1) break;
+    }
     ok(Object.keys(own.cels || {}).length === 1, 'local stroke synced to server');
     // create API key through the UI
     await tap('#btn-cloud'); await settle(400);
