@@ -293,6 +293,26 @@ function onDown(e) {
   mode = 'draw';
   app.busy = true;
   tools.down(screenToDoc(p.sx, p.sy), info(e));
+  armLongPress(e, p);
+}
+
+// Long-press (finger / Pencil held still ~0.6s while drawing) = one-shot eyedropper, like Procreate.
+let lpTimer = null;
+function clearLongPress() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+function armLongPress(e, p) {
+  clearLongPress();
+  if (e.pointerType === 'mouse' || !['pencil', 'eraser'].includes(app.ui.tool) || app.ui.oneShot) return;
+  const id = e.pointerId;
+  lpTimer = setTimeout(() => {
+    lpTimer = null;
+    const ptr = pointers.get(id);
+    if (mode !== 'draw' || !ptr || Math.hypot(ptr.sx - p.sx, ptr.sy - p.sy) > 8) return;
+    tools.cancel();
+    const d = screenToDoc(ptr.sx, ptr.sy), inf = { button: 0, alt: true, pointerType: e.pointerType };
+    tools.down(d, inf); tools.up(d, inf);
+    mode = null; app.busy = false; emit('idle');
+    emit('toast', '已吸取顏色（長按）');
+  }, 600);
 }
 
 function onMove(e) {
@@ -329,6 +349,7 @@ function onMove(e) {
 }
 
 function onUp(e) {
+  clearLongPress();
   const ptr = pointers.get(e.pointerId);
   pointers.delete(e.pointerId);
   const p = local(e);
@@ -357,6 +378,7 @@ function onUp(e) {
   if (ptr && ptr.type === 'touch' && tapInfo && pinch && pointers.size > 0) tapInfo.count = Math.max(tapInfo.count, pinch.count);
 }
 function onCancel(e) {
+  clearLongPress();
   pointers.delete(e.pointerId);
   if (mode === 'draw') { tools.cancel(); app.busy = false; emit('idle'); }
   if (pointers.size === 0) mode = null;

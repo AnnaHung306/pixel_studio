@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1462,6 +1462,29 @@ async function runProfile(name, target, base) {
     ok(await E(() => window.__e2e.cel(12, 12)[3]) === 0, 'cancelled stroke paints nothing');
     await E(() => window.__e2e.stroke([[14, 14]], 'pen'));
     ok(await E(() => window.__e2e.cel(14, 14)[3]) === 255, 'drawing works after a cancelled stroke');
+  };
+  S.longpress = async () => {
+    await newProject(16, 16, 'longpress');
+    await setPrimary([10, 200, 10, 255]);
+    await E(() => window.__e2e.stroke([[3, 3]], 'pen'));
+    await setPrimary([200, 10, 10, 255]);
+    await E(() => { window.__pixelStudio.app.ui.tool = 'pencil'; });
+    // hold a pen still on the green cell for > 600ms: picks the colour, paints nothing new
+    await E(() => {
+      const c = document.getElementById('view'); const q = window.__e2e.pt(3, 3);
+      window.__lp = (t) => c.dispatchEvent(new PointerEvent(t, { pointerId: 91, pointerType: 'pen', isPrimary: true, clientX: q.clientX, clientY: q.clientY, buttons: t === 'pointerdown' ? 1 : 0, bubbles: true, cancelable: true }));
+      window.__lp('pointerdown');
+    });
+    await settle(900);
+    await E(() => window.__lp('pointerup'));
+    await settle(100);
+    const pr = await E(() => window.__pixelStudio.app.ui.primary);
+    ok(pr[0] === 10 && pr[1] === 200, 'long press picks the colour under the pen', JSON.stringify(pr));
+    ok(await E(() => !window.__pixelStudio.app.busy), 'app idle after long press pick');
+    // a quick tap still draws
+    await setPrimary([200, 10, 10, 255]);
+    await E(() => window.__e2e.stroke([[8, 8]], 'pen'));
+    ok(await E(() => window.__e2e.cel(8, 8)[0]) === 200, 'short tap still draws');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');
