@@ -33,8 +33,8 @@ function editable() {
   if (!L.visible) { toast('此圖層已隱藏，請先顯示'); return false; }
   return true;
 }
-function brushOffsets() {
-  const s = app.ui.brushSize, out = [];
+function brushOffsets(s = app.ui.brushSize) {
+  const out = [];
   const lo = -Math.floor((s - 1) / 2);
   const c = (s - 1) / 2;
   for (let j = 0; j < s; j++)
@@ -46,6 +46,13 @@ function brushOffsets() {
       out.push([lo + i, lo + j]);
     }
   return out;
+}
+// Apple Pencil pressure → brush size (opt-in). Pressure 0..1 maps to 1..brushSize.
+export function pressureSizeFor(p, max) { return Math.max(1, Math.round(1 + (max - 1) * Math.min(1, Math.max(0, p)))); }
+function pressureSize(st, info) {
+  if (!st.pr || !(info.pressure > 0)) return;
+  const s = pressureSizeFor(info.pressure, app.ui.brushSize);
+  if (s !== st.sz) { st.sz = s; st.offs = brushOffsets(s); }
 }
 function symPoints(x, y) {
   const pts = [[x, y]];
@@ -94,7 +101,8 @@ export function down(pt, info) {
       const key = activeKey();
       const orig = app.doc.cels.get(key) || createBuffer(W(), H());
       const erase = tool === 'eraser';
-      stroke = { tool, key, orig, buf: orig.slice(), color: erase ? [0, 0, 0, 0] : color, erase, dither: app.ui.dither, painted: new Uint8Array(W() * H()), path: [[x, y]], offs: brushOffsets(), pp: app.ui.pixelPerfect && app.ui.brushSize === 1 };
+      stroke = { tool, key, orig, buf: orig.slice(), color: erase ? [0, 0, 0, 0] : color, erase, dither: app.ui.dither, painted: new Uint8Array(W() * H()), path: [[x, y]], offs: brushOffsets(), pp: app.ui.pixelPerfect && app.ui.brushSize === 1, pr: !!app.ui.pressure && info.pointerType === 'pen' };
+      pressureSize(stroke, info);
       stamp(stroke, x, y);
       app.overrides.set(key, stroke.buf);
       emit('canvas');
@@ -156,6 +164,7 @@ export function move(pt, info) {
   const st = stroke;
   switch (st.tool) {
     case 'pencil': case 'eraser': {
+      pressureSize(st, info);
       const last = st.path[st.path.length - 1];
       if (last[0] === x && last[1] === y) return;
       const pts = linePoints(last[0], last[1], x, y).slice(1);

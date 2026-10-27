@@ -253,7 +253,7 @@ function local(e) {
   return { sx: e.clientX - r.left, sy: e.clientY - r.top };
 }
 function info(e) {
-  return { button: e.button === 2 || (e.buttons & 2 && e.button !== 0) ? 2 : 0, shift: e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey || e.metaKey, pointerType: e.pointerType };
+  return { button: e.button === 2 || (e.buttons & 2 && e.button !== 0) ? 2 : 0, shift: e.shiftKey, alt: e.altKey, ctrl: e.ctrlKey || e.metaKey, pointerType: e.pointerType, pressure: e.pressure };
 }
 
 function bindInput() {

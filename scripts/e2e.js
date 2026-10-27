@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -91,7 +91,7 @@ const INIT = () => {
       const up = type === 'pointerup' || type === 'pointercancel';
       cv.dispatchEvent(new PointerEvent(type, {
         pointerId: id, pointerType, isPrimary: !!o.primary, bubbles: true, cancelable: true, composed: true,
-        button: type === 'pointermove' ? -1 : (o.button ?? 0), buttons: up ? 0 : (o.buttons ?? 1), pressure: up ? 0 : 0.5,
+        button: type === 'pointermove' ? -1 : (o.button ?? 0), buttons: up ? 0 : (o.buttons ?? 1), pressure: up ? 0 : (o.pressure ?? 0.5),
         width: pointerType === 'touch' ? 20 : 1, height: pointerType === 'touch' ? 20 : 1,
         shiftKey: !!o.shift, altKey: !!o.alt, ctrlKey: !!o.ctrl, ...c,
       }));
@@ -1527,6 +1527,26 @@ async function runProfile(name, target, base) {
     await menu('關閉無縫拼貼預覽');
     await settle(100);
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 255, 'menu toggles tile preview on/off; drawing intact');
+  };
+  S.pressure = async () => {
+    await newProject(32, 32, 'pressure');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, brushSize: 8, brushShape: 'square', pressure: false }));
+    await setPrimary([20, 20, 200, 255]);
+    await stroke([[4, 4], [6, 4]], 'pen', { pressure: 0.1 });
+    const count = () => E(() => { const b = window.__e2e.cel; let n = 0; for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) if (b(x, y)[3]) n++; return n; });
+    const off = await count();
+    await E(() => window.__pixelStudio.app.history.undo.length && window.__pixelStudio.undo());
+    await E(() => window.__pixelStudio.setUI({ pressure: true }));
+    await stroke([[4, 4], [6, 4]], 'pen', { pressure: 0.1 });
+    const light = await count();
+    await E(() => window.__pixelStudio.undo());
+    await stroke([[4, 4], [6, 4]], 'pen', { pressure: 1 });
+    const hard = await count();
+    await E(() => window.__pixelStudio.undo());
+    ok(hard > light * 2, `pen pressure scales brush (${light} < ${hard}; off=${off})`);
+    await stroke([[4, 4], [6, 4]], 'mouse', { pressure: 0.1 });
+    ok(await count() === off, 'mouse ignores pressure');
+    await E(() => window.__pixelStudio.setUI({ pressure: false, brushSize: 1 }));
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');

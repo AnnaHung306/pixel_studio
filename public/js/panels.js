@@ -74,7 +74,7 @@ export function renderOptions() {
   };
   const sym = () => h('span', { class: 'grp' }, tog('⇆ 對稱', 'symX', '左右對稱（水平對稱）'), tog('⇅ 對稱', 'symY', '上下對稱（垂直對稱）'));
   if (t === 'pencil' || t === 'eraser') {
-    add(sizeCtl(), shapeCtl());
+    add(sizeCtl(), shapeCtl(), tog('✎ 壓感', 'pressure', 'Apple Pencil 壓力控制筆刷大小（1 ～ 筆刷大小）'));
     if (t === 'pencil') add(tog('像素完美', 'pixelPerfect', '去除 L 形轉角（1px 筆刷時有效）'));
     add(dither(), sym());
   } else if (t === 'line' || t === 'rect' || t === 'ellipse') {
