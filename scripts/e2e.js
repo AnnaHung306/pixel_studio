@@ -1459,7 +1459,16 @@ async function runProfile(name, target, base) {
     });
     await settle(100);
     ok(r.busy === false, 'pointercancel leaves app idle', JSON.stringify(r));
-    ok(await E(() => window.__e2e.cel(12, 12)[3]) === 0, 'cancelled stroke paints nothing');
+    ok(await E(() => window.__e2e.cel(12, 12)[3]) === 255, 'pen pointercancel keeps the drawn stroke (B23)');
+    await E(() => { window.__pixelStudio.app && 0; });
+    const rt = await E(() => {
+      const c = document.getElementById('view'); const q = window.__e2e.pt(16, 12);
+      const mk = (t) => new PointerEvent(t, { pointerId: 78, pointerType: 'touch', isPrimary: true, clientX: q.clientX, clientY: q.clientY, buttons: t === 'pointercancel' ? 0 : 1, bubbles: true, cancelable: true });
+      c.dispatchEvent(mk('pointerdown')); c.dispatchEvent(mk('pointercancel'));
+      return { busy: !!window.__pixelStudio.app.busy };
+    });
+    await settle(100);
+    ok(rt.busy === false, 'touch pointercancel leaves app idle');
     await E(() => window.__e2e.stroke([[14, 14]], 'pen'));
     ok(await E(() => window.__e2e.cel(14, 14)[3]) === 255, 'drawing works after a cancelled stroke');
   };

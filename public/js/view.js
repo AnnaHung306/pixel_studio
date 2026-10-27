@@ -380,7 +380,13 @@ function onUp(e) {
 function onCancel(e) {
   clearLongPress();
   pointers.delete(e.pointerId);
-  if (mode === 'draw') { tools.cancel(); app.busy = false; emit('idle'); }
+  if (mode === 'draw') {
+    // Apple Pencil: a system gesture / palm event can cancel the pointer mid-stroke. Keep what was drawn
+    // (one undo step) instead of silently discarding it; a cancelled finger stroke is still dropped (likely accidental).
+    if (e.pointerType === 'pen') { const p = local(e); tools.up(screenToDoc(p.sx, p.sy), info(e)); }
+    else tools.cancel();
+    app.busy = false; emit('idle');
+  }
   if (pointers.size === 0) mode = null;
 }
 function onWheel(e) {
