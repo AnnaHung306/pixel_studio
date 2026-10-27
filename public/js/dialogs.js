@@ -350,7 +350,7 @@ export function shortcutsDialog() {
     ['X', '交換主要 / 次要顏色'], ['[ / ]', '筆刷大小'], ['Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z', '復原 / 重做'], ['Ctrl+C / X / V', '複製 / 剪下 / 貼上'], ['Delete', '刪除選取內容（無選取時清除 cel）'],
     ['Ctrl+A / Ctrl+D / Ctrl+Shift+I', '全選 / 取消選取 / 反選'], ['Enter / Esc', '確定 / 取消浮動選取'], ['方向鍵', '移動選取內容 1px'], ['Shift+H / Shift+V', '水平 / 垂直翻轉選取'],
     [', / .', '上一格 / 下一格'], ['Enter（無選取）', '播放 / 暫停'], ['Alt+N / Alt+D', '新增影格 / 複製影格'], ['Shift+N', '新增圖層'], ['Ctrl+E', '向下合併'], ['F3', '洋蔥皮'],
-    ['滾輪 / 觸控板捏合', '縮放'], ['+ / - / 0', '放大 / 縮小 / 符合視窗'], ["Ctrl+'", '像素格線'], ['Ctrl+S / Ctrl+Shift+S', '儲存 / 下載 .pxs'], ['Ctrl+Shift+E', '匯出'], ['Ctrl+N / Ctrl+O', '新增 / 開啟'],
+    ['滾輪 / 觸控板捏合', '縮放'], ['+ / - / 0', '放大 / 縮小 / 符合視窗'], ["Ctrl+'", '像素格線'], ['Tab', '專注模式（隱藏面板）'], ['Ctrl+S / Ctrl+Shift+S', '儲存 / 下載 .pxs'], ['Ctrl+Shift+E', '匯出'], ['Ctrl+N / Ctrl+O', '新增 / 開啟'],
     ['雙指點按 / 三指點按', '（觸控）復原 / 重做'], ['雙指捏合拖曳', '（觸控）縮放平移'],
   ];
   modal({ title: '快捷鍵', wide: true, body: h('table', { class: 't' }, rows.map(([k, v]) => h('tr', {}, h('td', {}, h('code', {}, k)), h('td', {}, v)))) });

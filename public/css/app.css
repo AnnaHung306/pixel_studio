@@ -268,3 +268,10 @@ html.touch input[type=checkbox] { width: 22px; height: 22px; }
 #notice-bar .msg { flex: 1 1 260px; }
 #notice-bar .acts { display: flex; gap: 8px; flex-wrap: wrap; }
 .install-help ol { padding-left: 1.4em; margin: 0 0 8px; line-height: 1.7; }
+
+/* ---------- focus mode (1.6.0, B11): canvas maximised; tools + a floating pill stay ---------- */
+#focus-pill { display: none; position: absolute; left: 8px; top: 8px; z-index: 6; gap: 4px; background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 4px; box-shadow: 0 4px 16px #0006; opacity: .92; }
+#focus-pill .ib { min-width: 44px; min-height: 44px; padding: 0 10px; }
+#app.focus #topbar, #app.focus #optionsbar, #app.focus #sidepanel, #app.focus #timeline, #app.focus #notice-bar { display: none !important; }
+#app.focus #focus-pill { display: flex; }
+#btn-focus.on { background: var(--acc2); }

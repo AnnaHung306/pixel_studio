@@ -237,6 +237,18 @@ function highlightFrame() {
 }
 on('togglePlay', () => (app.ui.playing ? stopPlay() : startPlay()));
 
+// ---------- focus mode (1.6.0) ----------
+export function toggleFocus(on) {
+  const appEl = document.getElementById('app');
+  const next = on === undefined ? !appEl.classList.contains('focus') : !!on;
+  appEl.classList.toggle('focus', next);
+  const b = document.getElementById('btn-focus');
+  b.classList.toggle('on', next); b.setAttribute('aria-pressed', String(next));
+  document.querySelectorAll('.sheet.open').forEach((x) => x.classList.remove('open'));
+  if (next) toast('專注模式：再按 Tab 或「離開專注」返回');
+  requestAnimationFrame(() => fitView());
+}
+
 // ---------- top bar ----------
 function bindTopbar() {
   const $ = (id) => document.getElementById(id);
@@ -246,6 +258,10 @@ function bindTopbar() {
   $('btn-zoom-out').onclick = () => zoomAt(0.5);
   $('btn-zoom').onclick = () => fitView();
   $('btn-grid').onclick = () => setUI({ showGrid: !app.ui.showGrid });
+  $('btn-focus').onclick = () => toggleFocus();
+  $('fp-exit').onclick = () => toggleFocus(false);
+  $('fp-undo').onclick = () => undo();
+  $('fp-redo').onclick = () => redo();
   $('btn-cloud').onclick = () => D.serverDialog();
   $('btn-menu').onclick = (e) => mainMenu(e.currentTarget);
   $('doc-title').onclick = async () => { const n = await prompt('重新命名專案', app.doc.meta.name); if (n && n.trim()) A.renameProject(n.trim()); };
@@ -294,6 +310,7 @@ function mainMenu(anchor) {
     { label: '放大 / 縮小', key: '+ / −', action: () => zoomAt(2) },
     { label: app.ui.showGrid ? '隱藏像素格線' : '顯示像素格線', key: "Ctrl+'", action: () => setUI({ showGrid: !app.ui.showGrid }) },
     { label: '自訂格線…', action: gridDialog },
+    { label: '專注模式（畫布最大化）', key: 'Tab', action: () => toggleFocus() },
     '-',
     { label: '伺服器 · 雲端 · AI API…', action: () => D.serverDialog() },
     { label: '快捷鍵說明', action: D.shortcutsDialog },
@@ -423,6 +440,7 @@ function onKey(e) {
     case '.': done(); A.selectFrame(app.ui.frame + 1); return;
     case 'F3': done(); setUI({ onion: { ...app.ui.onion, on: !app.ui.onion.on } }); return;
     case 'Delete': case 'Backspace': done(); T.deleteSelection(); return;
+    case 'Tab': done(); toggleFocus(); return;
     case 'Escape': done(); if (app.floating) T.cancelFloating(); else T.deselect(); return;
     case 'Enter': done(); if (app.floating) T.dropFloating(); else emit('togglePlay'); return;
     case 'ArrowLeft': if (T.nudge(-1, 0)) done(); else { done(); A.selectFrame(app.ui.frame - 1); } return;

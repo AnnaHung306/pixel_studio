@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1387,6 +1387,44 @@ async function runProfile(name, target, base) {
     await settle(200);
     ok(await E(() => document.getElementById('toast').textContent.includes('複製') || document.getElementById('toast').textContent.includes('拷貝')), 'copy gives feedback');
     await closeModals();
+  };
+
+  S.focus = async () => {
+    await newProject(16, 16, 'focus');
+    const area = () => E(() => { const r = document.getElementById('stage').getBoundingClientRect(); return Math.round(r.width * r.height); });
+    const vis = (sel) => E((s) => { const e = document.querySelector(s); return !!e && getComputedStyle(e).display !== 'none' && e.getBoundingClientRect().height > 0; }, sel);
+    const a0 = await area();
+    ok(!(await vis('#focus-pill')), 'focus pill hidden normally');
+    await menu('專注模式');
+    await settle(200);
+    ok(await E(() => document.getElementById('app').classList.contains('focus')), 'menu → 專注模式 enters focus mode');
+    ok(!(await vis('#topbar')) && !(await vis('#optionsbar')) && !(await vis('#sidepanel')) && !(await vis('#timeline')), 'top bar, options, side panel and timeline are hidden');
+    ok(await vis('#toolbar') && await vis('#focus-pill') && await vis('#view'), 'tools, floating pill and canvas stay visible');
+    const a1 = await area();
+    ok(a1 > a0 * 1.1, `canvas area grows (${a0} → ${a1})`);
+    if (prof.touch) {
+      const sizes = await E(() => [...document.querySelectorAll('#focus-pill button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
+      ok(sizes.length === 3 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'focus pill buttons ≥ 44pt', JSON.stringify(sizes));
+    }
+    await layoutOk('focus mode');
+    await setPrimary([10, 200, 10, 255]);
+    await E(() => window.__e2e.stroke([[3, 3], [4, 3]], 'pen'));
+    ok(await E(() => window.__e2e.cel(3, 3)[3]) === 255, 'drawing works in focus mode');
+    await tap('#fp-undo');
+    ok(await E(() => window.__e2e.cel(3, 3)[3]) === 0 && await E(() => document.getElementById('fp-redo').disabled === false), 'pill undo works and enables redo');
+    await tap('#fp-redo');
+    ok(await E(() => window.__e2e.cel(3, 3)[3]) === 255, 'pill redo works');
+    if (!prof.touch) {
+      await page.keyboard.press('Tab'); await settle(150);
+      ok(!(await E(() => document.getElementById('app').classList.contains('focus'))), 'Tab key leaves focus mode');
+      await page.keyboard.press('Tab'); await settle(150);
+      ok(await E(() => document.getElementById('app').classList.contains('focus')), 'Tab key enters focus mode');
+    }
+    await tap('#fp-exit'); await settle(200);
+    ok(await vis('#topbar') && await vis('#timeline') && !(await vis('#focus-pill')), 'exit restores panels');
+    const a2 = await area();
+    ok(Math.abs(a2 - a0) < a0 * 0.02, `canvas area restored (${a0} → ${a2})`);
+    await layoutOk('after focus mode');
   };
 
   for (const s of suites) {

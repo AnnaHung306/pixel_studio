@@ -480,6 +480,8 @@ export function renderHistory() {
   root.scrollTop = root.scrollHeight;
   document.getElementById('btn-undo').disabled = !U.length;
   document.getElementById('btn-redo').disabled = !R.length;
+  document.getElementById('fp-undo').disabled = !U.length;
+  document.getElementById('fp-redo').disabled = !R.length;
 }
 
 // ---------- preview ----------
