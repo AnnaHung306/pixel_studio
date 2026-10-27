@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -364,6 +364,7 @@ async function runProfile(name, target, base) {
     if (isPhone) {
       for (const w of ['color', 'side', 'timeline']) {
         await openSheet(w);
+        await settle(450);
         const r = await E((id) => { const el = document.getElementById(id); const b = el.getBoundingClientRect(); return { top: b.top, bottom: b.bottom, h: innerHeight, open: el.classList.contains('open'), vvTop: visualViewport?.offsetTop, vvH: visualViewport?.height, ch: document.documentElement.clientHeight, tf: getComputedStyle(el).transform }; }, w === 'timeline' ? 'timeline' : 'sidepanel');
         ok(r.open && r.top >= 0 && r.bottom <= r.h + 2, `bottom sheet "${w}" opens fully on-screen`, JSON.stringify(r));
         await layoutOk('sheet ' + w);
@@ -1614,6 +1615,20 @@ async function runProfile(name, target, base) {
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent pixels stay transparent');
     await E(() => window.__pixelStudio.undo());
     ok(await E(() => window.__e2e.cel(4, 3)[0]) === 10, 'undo restores colour');
+  };
+  S.grayhue = async () => {
+    await newProject(16, 16, 'gh');
+    await setPrimary([255, 0, 0, 255]);
+    await E(() => window.__e2e.stroke([[3, 3], [6, 3]], 'pen'));
+    await menu('色相偏移');
+    const h = await E(() => window.__e2e.cel(4, 3));
+    ok(h[3] === 255 && h[0] < 240 && h[1] > 10 && h[1] - h[2] > 10, 'hue shift +30° turns red toward orange/yellow', JSON.stringify(h));
+    await E(() => window.__pixelStudio.undo());
+    ok(await E(() => window.__e2e.cel(4, 3)[0]) === 255 && await E(() => window.__e2e.cel(4, 3)[1]) === 0, 'undo restores red');
+    await menu('灰階');
+    const g = await E(() => window.__e2e.cel(4, 3));
+    ok(g[0] === g[1] && g[1] === g[2] && g[0] === 76 && g[3] === 255, 'grayscale yields equal channels, alpha kept', JSON.stringify(g));
+    ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent pixels stay transparent');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');

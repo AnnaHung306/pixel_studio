@@ -309,6 +309,8 @@ function mainMenu(anchor) {
     { label: '垂直翻轉', key: 'Shift+V', action: () => T.transformSelection('flipV') },
     { label: '全部轉換為調色盤顏色', action: A.convertToPalette },
     { label: '反相顏色（所有圖層）', action: A.invertColors },
+    { label: '灰階（所有圖層）', action: A.grayscaleColors },
+    { label: '色相偏移 +30°（所有圖層）', action: () => A.hueShift(30) },
     { label: '順時針旋轉 90°', action: () => T.transformSelection('rotCW') },
     '-',
     { header: '檢視' },

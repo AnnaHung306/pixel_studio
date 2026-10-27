@@ -273,3 +273,40 @@ export function invertColors() {
   toast(changed ? `已反相 ${changed} 個像素` : '沒有可反相的像素');
   return changed;
 }
+
+// Map every opaque pixel's RGB through fn (iter 29). Returns pixels changed.
+function mapColors(label, fn, doneMsg, noneMsg) {
+  dropFloating();
+  let changed = 0;
+  commit(label, () => {
+    for (const [k, buf] of app.doc.cels) {
+      const nb = buf.slice();
+      for (let i = 0; i < nb.length; i += 4) {
+        if (nb[i + 3] === 0) continue;
+        const [r, g, b] = fn(nb[i], nb[i + 1], nb[i + 2]);
+        if (r !== nb[i] || g !== nb[i + 1] || b !== nb[i + 2]) { nb[i] = r; nb[i + 1] = g; nb[i + 2] = b; changed++; }
+      }
+      app.doc.cels.set(k, nb);
+    }
+  });
+  toast(changed ? doneMsg(changed) : noneMsg);
+  return changed;
+}
+
+// Grayscale (Rec.601 luma) of all cels (iter 29).
+export function grayscaleColors() {
+  return mapColors('灰階', (r, g, b) => { const y = Math.round(0.299 * r + 0.587 * g + 0.114 * b); return [y, y, y]; }, (n) => `已轉為灰階 ${n} 個像素`, '沒有可轉換的像素');
+}
+
+// Rotate hue by deg (iter 29).
+export function hueShift(deg = 30) {
+  return mapColors('色相偏移', (r, g, b) => {
+    const a = deg * Math.PI / 180, c = Math.cos(a), s = Math.sin(a);
+    const m = [
+      0.213 + c * 0.787 - s * 0.213, 0.715 - c * 0.715 - s * 0.715, 0.072 - c * 0.072 + s * 0.928,
+      0.213 - c * 0.213 + s * 0.143, 0.715 + c * 0.285 + s * 0.140, 0.072 - c * 0.072 - s * 0.283,
+      0.213 - c * 0.213 - s * 0.787, 0.715 - c * 0.715 + s * 0.715, 0.072 + c * 0.928 + s * 0.072];
+    const cl = (v) => Math.max(0, Math.min(255, Math.round(v)));
+    return [cl(m[0] * r + m[1] * g + m[2] * b), cl(m[3] * r + m[4] * g + m[5] * b), cl(m[6] * r + m[7] * g + m[8] * b)];
+  }, (n) => `已偏移色相 ${deg}°（${n} 個像素）`, '沒有可轉換的像素');
+}
