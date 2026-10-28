@@ -336,3 +336,11 @@ export function newProjectMeta({ name = '未命名', width = 32, height = 32, pa
     updatedAt: Date.now(),
   };
 }
+
+// B40：匯出倍率防護。iPadOS Safari 的 canvas 上限約 16,777,216 像素（4096×4096），舊機型更低；超過會得到空白圖或記憶體不足。
+export const MAX_EXPORT_PIXELS = 16777216;
+export function limitScale(scale, w, h, maxPixels = MAX_EXPORT_PIXELS) {
+  scale = Math.max(1, scale | 0);
+  while (scale > 1 && w * scale * h * scale > maxPixels) scale--;
+  return scale;
+}

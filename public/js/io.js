@@ -1,7 +1,7 @@
 // Export (PNG, scaled PNG, sprite sheet + JSON, GIF, APNG, ZIP of frames, .pxs) and import (PNG/GIF/JPG/.pxs).
 import { app, W, H, commit, uid, celKey, toast } from './state.js';
 import { compositeAll } from './actions.js';
-import { scaleNearest, createBuffer, reframe, isEmpty } from './core/raster.js';
+import { scaleNearest, createBuffer, reframe, isEmpty, limitScale } from './core/raster.js';
 import { encodeGIF, encodeAPNG, encodePNG, makeZip, decodeGIF, sheetGeometry } from './formats.js';
 import { download, readAs, isIOS } from './dom.js';
 import { docToJSON, docFromJSON } from './storage.js';
@@ -31,16 +31,24 @@ async function bufToPngBlob(buf, w, h) {
   } catch {}
   return encodePNG(buf, w, h);
 }
+function guardScale(scale, w = W(), h = H()) {
+  const s = limitScale(scale, w, h);
+  if (s !== scale) toast(`尺寸過大，匯出倍率已自動降為 ${s}×`);
+  return s;
+}
+
 const bytes = async (blob) => new Uint8Array(await blob.arrayBuffer());
 
 export async function exportPNG(scale = 1, fi = app.ui.frame) {
   dropFloating();
+  scale = guardScale(scale);
   const buf = scaleNearest(compositeAll(fi), W(), H(), scale);
   download(await bufToPngBlob(buf, W() * scale, H() * scale), `${safeName()}${app.doc.meta.frames.length > 1 ? '-' + (fi + 1) : ''}${scale > 1 ? '@' + scale + 'x' : ''}.png`);
 }
 
 export async function exportFramesZip(scale, idxs) {
   dropFloating();
+  scale = guardScale(scale);
   const files = [];
   for (const [n, i] of idxs.entries()) {
     const buf = scaleNearest(compositeAll(i), W(), H(), scale);
@@ -54,6 +62,7 @@ export async function exportSheet(scale, idxs, { layout = 'horizontal', columns 
   const n = idxs.length, w = W(), h = H();
   const geo = sheetGeometry(n, w, h, layout, columns, pad);
   const SW = geo.width, SH = geo.height;
+  scale = guardScale(scale, SW, SH);
   const sheet = createBuffer(SW, SH);
   const framesJson = {};
   idxs.forEach((fi, k) => {
@@ -93,12 +102,14 @@ function animSequence(idxs, loopMode) {
 }
 export async function exportGIF(scale, idxs, loopMode = 'loop') {
   dropFloating();
+  scale = guardScale(scale);
   const seq = animSequence(idxs, loopMode);
   const frames = seq.map((fi) => ({ buf: scaleNearest(compositeAll(fi), W(), H(), scale), duration: app.doc.meta.frames[fi].duration }));
   download(encodeGIF(frames, W() * scale, H() * scale, loopMode === 'once' ? 1 : 0), `${safeName()}${scale > 1 ? '@' + scale + 'x' : ''}.gif`);
 }
 export async function exportAPNG(scale, idxs, loopMode = 'loop') {
   dropFloating();
+  scale = guardScale(scale);
   const seq = animSequence(idxs, loopMode);
   const frames = seq.map((fi) => ({ buf: scaleNearest(compositeAll(fi), W(), H(), scale), duration: app.doc.meta.frames[fi].duration }));
   download(await encodeAPNG(frames, W() * scale, H() * scale, loopMode === 'once' ? 1 : 0), `${safeName()}${scale > 1 ? '@' + scale + 'x' : ''}.apng.png`);
