@@ -158,7 +158,7 @@ export function renderColorEditor() {
     const alpha = h('canvas', { class: 'ce-bar checker', width: 200, height: 16 });
     const hex = h('input', { type: 'text', class: 'ce-hex', maxlength: 9, title: '十六進位色碼 #RRGGBB 或 #RRGGBBAA' });
     const cur = h('div', { class: 'ce-cur checker' }, h('span', { class: 'swatch-fill' }));
-    const prev = h('button', { class: 'ce-prev checker', title: '還原為編輯前的顏色', 'aria-label': '還原為編輯前的顏色', style: { display: 'none' }, onclick: () => { if (origColor) { const o = origColor; origColor = null; setCur(o); } } }, h('span', { class: 'swatch-fill' }));
+    const prev = h('button', { class: 'ce-prev checker', title: '還原為編輯前的顏色', 'aria-label': '還原為編輯前的顏色', style: { display: 'none' }, onclick: () => { if (origColor) { const o = origColor; origColor = null; setCur(o); lastColorKey = [...o].join(',') + app.ui.activeSlot; draw(); } } }, h('span', { class: 'swatch-fill' }));
     const addBtn = h('button', { class: 'sb', title: '加入調色盤', onclick: () => A.addPaletteColor(curColor()) }, '＋色盤');
     hex.addEventListener('change', () => { try { const o = curColor().slice(); setCur(hexToRgba(hex.value)); origColor = o; draw(); } catch { toast('色碼格式錯誤'); } });
     const drag = (el, fn) => {

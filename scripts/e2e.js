@@ -1684,7 +1684,7 @@ async function runProfile(name, target, base) {
     ok(await E(() => getComputedStyle(document.querySelector('#color-editor .ce-prev')).display) !== 'none', 'revert shown after edit');
     await E(() => document.querySelector('#color-editor .ce-prev').click());
     ok((await ui('primary')).join() === '10,20,30,255', 'revert restores original colour', JSON.stringify(await ui('primary')));
-    await E(() => new Promise((r) => setTimeout(r, 150)));
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#color-editor .ce-prev')).display === 'none', null, { timeout: 3000 }).catch(() => {});
     ok(await E(() => getComputedStyle(document.querySelector('#color-editor .ce-prev')).display) === 'none', 'revert hidden after revert');
   };
   S.pvmark = async () => {
