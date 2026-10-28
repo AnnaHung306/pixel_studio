@@ -11,6 +11,7 @@ const docCtx = docCanvas.getContext('2d');
 const onionCache = new Map(); // frameIdx -> {ver, canvas}
 const refImages = new Map(); // refId -> {src, img}
 let needsRender = true;
+let contentDirty = true; // B20: composite only when doc content changed (not on pan/zoom/hover)
 let hover = null; // doc coords
 let spaceDown = false;
 
@@ -20,9 +21,9 @@ export function initView() {
   ctx = canvas.getContext('2d');
   new ResizeObserver(resize).observe(stage);
   resize();
-  on('canvas', () => (needsRender = true));
-  on('doc', () => { onionCache.clear(); needsRender = true; });
-  on('ui', () => (needsRender = true));
+  on('canvas', () => { needsRender = contentDirty = true; });
+  on('doc', () => { onionCache.clear(); needsRender = contentDirty = true; });
+  on('ui', () => { needsRender = contentDirty = true; });
   loop();
   bindInput();
 }
@@ -63,7 +64,7 @@ function loop() {
   if (needsRender && app.doc) { needsRender = false; render(); }
   requestAnimationFrame(loop);
 }
-export function requestRender() { needsRender = true; }
+export function requestRender() { needsRender = contentDirty = true; }
 
 function bufToCanvas(buf, w, h, c = document.createElement('canvas')) {
   if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
@@ -155,7 +156,7 @@ function render() {
   }
 
   // current frame
-  bufToCanvas(frameComposite(app.ui.frame), w, h, docCanvas);
+  if (contentDirty || docCanvas.width !== w || docCanvas.height !== h) { bufToCanvas(frameComposite(app.ui.frame), w, h, docCanvas); contentDirty = false; }
   if (app.ui.tilePreview) {
     ctx.globalAlpha = 0.5;
     for (let ty = -1; ty <= 1; ty++) for (let tx = -1; tx <= 1; tx++) if (tx || ty) ctx.drawImage(docCanvas, tx * w * z, ty * h * z, w * z, h * z);
