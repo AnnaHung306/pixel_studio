@@ -311,6 +311,14 @@ export function hueShift(deg = 30) {
   }, (n) => `已偏移色相 ${deg}°（${n} 個像素）`, '沒有可轉換的像素');
 }
 
+// Raise/lower contrast of all cels by pct percent (iter 39): scales distance from mid-gray 128.
+export function adjustContrast(pct = 20) {
+  const k = 1 + Math.max(-100, Math.min(100, pct)) / 100;
+  const f = (v) => Math.max(0, Math.min(255, Math.round((v - 128) * k + 128)));
+  const nm = pct >= 0 ? '增加對比' : '降低對比';
+  return mapColors(nm, (r, g, b) => [f(r), f(g), f(b)], (n) => `已${nm} ${Math.abs(pct)}%（${n} 個像素）`, '沒有可調整的像素');
+}
+
 // Lighten/darken all cels by pct percent (iter 38): positive blends toward white, negative toward black.
 export function adjustBrightness(pct = 15) {
   const t = Math.max(-100, Math.min(100, pct)) / 100;
