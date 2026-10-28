@@ -1674,6 +1674,13 @@ async function runProfile(name, target, base) {
     ok(await E(() => window.__e2e.cel(5, 5)[0]) === 255, 'original pixel kept');
     await E(() => window.__pixelStudio.undo());
     ok(await E(() => window.__e2e.cel(4, 5)[3]) === 0, 'undo removes outline');
+    await menu('加外框（含斜角');
+    ok(await E(() => window.__e2e.cel(4, 4)[3]) === 255, '8-neighbour outline fills diagonals');
+    await E(() => window.__pixelStudio.undo());
+    await E(() => window.__e2e.stroke([[5, 6], [6, 5], [6, 6], [4, 5], [4, 6], [4, 4], [5, 4], [6, 4]], 'pen'));
+    await setPrimary([0, 255, 0, 255]);
+    await menu('加內框');
+    ok(await E(() => window.__e2e.cel(5, 5)[1]) === 0 && await E(() => window.__e2e.cel(4, 4)[1]) === 255, 'inner outline recolors edge pixels, keeps centre');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');

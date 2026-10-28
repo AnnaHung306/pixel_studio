@@ -311,22 +311,32 @@ export function hueShift(deg = 30) {
   }, (n) => `已偏移色相 ${deg}°（${n} 個像素）`, '沒有可轉換的像素');
 }
 
-// Add a 1px outline (4-neighbour, primary color) around opaque pixels of the active cel (iter 35). Returns pixels added.
-export function addOutline() {
+// Add a 1px outline around opaque pixels of the active cel (iter 35; options iter 36).
+// mode: 'outer' (default, transparent pixels next to art) | 'inner' (opaque edge pixels become outline). diag: 8-neighbour.
+export function addOutline(opts = {}) {
+  const { mode = 'outer', diag = false } = opts;
   dropFloating();
   const key = activeKey();
   const src = app.doc.cels.get(key);
   if (!src) { toast('這個影格的圖層是空的'); return 0; }
   const w = W(), h = H(), nb = src.slice(), c = app.ui.primary;
+  const inner = mode === 'inner';
+  const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+  if (diag) dirs.push([-1, -1], [1, -1], [-1, 1], [1, 1]);
   let added = 0;
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
     const i = (y * w + x) * 4;
-    if (src[i + 3] !== 0) continue;
-    const n = (x > 0 && src[i - 1] !== 0) || (x < w - 1 && src[i + 7] !== 0) || (y > 0 && src[i - w * 4 + 3] !== 0) || (y < h - 1 && src[i + w * 4 + 3] !== 0);
+    if ((src[i + 3] !== 0) === !inner) continue; // outer: only transparent; inner: only opaque
+    let n = false;
+    for (const [dx, dy] of dirs) {
+      const xx = x + dx, yy = y + dy;
+      const op = xx >= 0 && xx < w && yy >= 0 && yy < h ? src[(yy * w + xx) * 4 + 3] !== 0 : false;
+      if (inner ? !op : op) { n = true; break; }
+    }
     if (n) { nb[i] = c[0]; nb[i + 1] = c[1]; nb[i + 2] = c[2]; nb[i + 3] = 255; added++; }
   }
   if (!added) { toast('沒有可加外框的像素'); return 0; }
-  commit('加外框', () => { setCel(key, nb); });
-  toast(`已加外框 ${added} 個像素`);
+  commit(inner ? '加內框' : '加外框', () => { setCel(key, nb); });
+  toast(`已加${inner ? '內' : '外'}框 ${added} 個像素`);
   return added;
 }
