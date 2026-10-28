@@ -1,5 +1,5 @@
 // Document-level actions: layers, frames, tags, canvas size, palette.
-import { app, commit, emit, setUI, activeLayer, layerIndex, W, H, toast, uid, celKey } from './state.js';
+import { app, commit, emit, setUI, activeLayer, activeKey, layerIndex, W, H, toast, uid, celKey } from './state.js';
 import { dropFloating, setCel } from './tools.js';
 import { nearestPaletteColor } from './core/palettes.js';
 import { reframe, compositeLayers, blendInto, createBuffer, rgbaToHex } from './core/raster.js';
@@ -309,4 +309,24 @@ export function hueShift(deg = 30) {
     const cl = (v) => Math.max(0, Math.min(255, Math.round(v)));
     return [cl(m[0] * r + m[1] * g + m[2] * b), cl(m[3] * r + m[4] * g + m[5] * b), cl(m[6] * r + m[7] * g + m[8] * b)];
   }, (n) => `已偏移色相 ${deg}°（${n} 個像素）`, '沒有可轉換的像素');
+}
+
+// Add a 1px outline (4-neighbour, primary color) around opaque pixels of the active cel (iter 35). Returns pixels added.
+export function addOutline() {
+  dropFloating();
+  const key = activeKey();
+  const src = app.doc.cels.get(key);
+  if (!src) { toast('這個影格的圖層是空的'); return 0; }
+  const w = W(), h = H(), nb = src.slice(), c = app.ui.primary;
+  let added = 0;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = (y * w + x) * 4;
+    if (src[i + 3] !== 0) continue;
+    const n = (x > 0 && src[i - 1] !== 0) || (x < w - 1 && src[i + 7] !== 0) || (y > 0 && src[i - w * 4 + 3] !== 0) || (y < h - 1 && src[i + w * 4 + 3] !== 0);
+    if (n) { nb[i] = c[0]; nb[i + 1] = c[1]; nb[i + 2] = c[2]; nb[i + 3] = 255; added++; }
+  }
+  if (!added) { toast('沒有可加外框的像素'); return 0; }
+  commit('加外框', () => { setCel(key, nb); });
+  toast(`已加外框 ${added} 個像素`);
+  return added;
 }

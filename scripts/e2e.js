@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1660,6 +1660,20 @@ async function runProfile(name, target, base) {
     const g = await E(() => window.__e2e.cel(4, 3));
     ok(g[0] === g[1] && g[1] === g[2] && g[0] === 76 && g[3] === 255, 'grayscale yields equal channels, alpha kept', JSON.stringify(g));
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent pixels stay transparent');
+  };
+  S.outline = async () => {
+    await newProject(16, 16, 'ol');
+    await E(() => { const u = window.__pixelStudio.app.ui; u.brushShape = 'square'; u.brushSize = 1; u.customBrush = null; });
+    await setPrimary([255, 0, 0, 255]);
+    await E(() => window.__e2e.stroke([[5, 5]], 'pen'));
+    await setPrimary([0, 0, 255, 255]);
+    await menu('加外框');
+    const n = await E(() => [[4, 5], [6, 5], [5, 4], [5, 6]].map(([x, y]) => window.__e2e.cel(x, y)));
+    ok(n.every((p) => p[2] === 255 && p[0] === 0 && p[3] === 255), 'outline fills 4 neighbours with primary', JSON.stringify(n));
+    ok(await E(() => window.__e2e.cel(4, 4)[3]) === 0, 'diagonals stay empty');
+    ok(await E(() => window.__e2e.cel(5, 5)[0]) === 255, 'original pixel kept');
+    await E(() => window.__pixelStudio.undo());
+    ok(await E(() => window.__e2e.cel(4, 5)[3]) === 0, 'undo removes outline');
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');
