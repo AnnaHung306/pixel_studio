@@ -345,6 +345,7 @@ function mainMenu(anchor) {
       const seq = [400, 600, 900, 0]; const n = seq[(seq.indexOf(app.ui.longPressMs) + 1) % seq.length];
       setUI({ longPressMs: n }); toast(n ? `長按吸色：${n / 1000} 秒` : '長按吸色：已關閉');
     } },
+    { label: app.ui.tapGestures === false ? '雙指／三指點按復原：已關閉（點此開啟）' : '雙指／三指點按復原：開啟（點此關閉）', action: () => { const v = app.ui.tapGestures === false; setUI({ tapGestures: v }); toast(v ? '雙指／三指點按復原：已開啟' : '雙指／三指點按復原：已關閉'); } },
     { label: '專注模式（畫布最大化）', key: 'Tab', action: () => toggleFocus() },
     '-',
     { label: '伺服器 · 雲端 · AI API…', action: () => D.serverDialog() },
@@ -544,8 +545,8 @@ async function boot() {
   on('ui', () => {
     clearTimeout(boot.pt);
     boot.pt = setTimeout(() => {
-      const { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, shapeFilled, symX, symY, linkMove, wrapMove, dither, shadeInk, longPressMs, paletteLock, customBrush } = app.ui;
-      store.setSetting('uiPrefs', { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, shapeFilled, symX, symY, linkMove, wrapMove, dither, shadeInk, longPressMs, paletteLock, customBrush });
+      const { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, shapeFilled, symX, symY, linkMove, wrapMove, dither, shadeInk, longPressMs, tapGestures, paletteLock, customBrush } = app.ui;
+      store.setSetting('uiPrefs', { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, shapeFilled, symX, symY, linkMove, wrapMove, dither, shadeInk, longPressMs, tapGestures, paletteLock, customBrush });
     }, 500);
   });
   let doc = null;

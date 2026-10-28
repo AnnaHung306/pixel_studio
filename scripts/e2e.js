@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -864,6 +864,23 @@ async function runProfile(name, target, base) {
     ok((await ui('customGrid')).on, 'custom tile grid on');
     await E(() => window.__pixelStudio.setUI({ customGrid: { ...window.__pixelStudio.app.ui.customGrid, on: false } }));
     await layoutOk('after zoom/pan');
+  };
+
+  S.tapgest = async () => {
+    await newProject(16, 16, 'tapg');
+    await stroke([[2, 1], [2, 3]]);
+    ok(await E(() => window.__pixelStudio.app.ui.tapGestures) === true, 'tap gestures default on');
+    if (prof.touch) {
+      await E(() => window.__pixelStudio.setUI({ tapGestures: false }));
+      await E(() => window.__e2e.multiTap(2));
+      ok(await histLen() === 1, 'two-finger tap ignored when disabled', await histLen());
+      await E(() => window.__pixelStudio.setUI({ tapGestures: true }));
+      await E(() => window.__e2e.multiTap(2));
+      ok(await histLen() === 0, 'two-finger tap undoes when enabled', await histLen());
+      ok(await page.locator('.toast, #toast').filter({ hasText: '已復原' }).count() > 0, 'undo toast shown');
+      await E(() => window.__e2e.multiTap(3));
+      ok(await histLen() === 1, 'three-finger tap redoes');
+    }
   };
 
   S.history = async () => {

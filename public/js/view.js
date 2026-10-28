@@ -373,8 +373,9 @@ function onUp(e) {
     if (remaining === 0) {
       // two-finger tap = undo, three-finger tap = redo
       if (tapInfo && !tapInfo.moved && Date.now() - tapInfo.t < 300) {
-        if (tapInfo.count === 2) undo();
-        else if (tapInfo.count >= 3) redo();
+        if (app.ui.tapGestures === false) { /* disabled in settings */ }
+        else if (tapInfo.count === 2) { const n = app.history.undo.length; undo(); emit('toast', n ? '已復原（雙指點按）' : '沒有可復原的步驟'); }
+        else if (tapInfo.count >= 3) { const n = app.history.redo.length; redo(); emit('toast', n ? '已重做（三指點按）' : '沒有可重做的步驟'); }
       }
       tapInfo = null;
       mode = null;
