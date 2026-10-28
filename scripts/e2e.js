@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1725,6 +1725,21 @@ async function runProfile(name, target, base) {
     await E(() => window.__pixelStudio.undo());
     ok((await cel(2, 2, 0)).join() === '255,0,0,255' && (await cel(5, 5, 1)).join() === '0,0,255,255', 'one undo restores all layers');
     await E(() => window.__pixelStudio.setUI({ linkMove: false }));
+  };
+  S.wrapmove = async () => {
+    await newProject(16, 16, 'wm');
+    await setPrimary([255, 0, 0, 255]);
+    await stroke([[14, 2], [14, 2]]);
+    await tool('move');
+    await E(() => window.__pixelStudio.setUI({ wrapMove: true }));
+    await stroke([[8, 8], [11, 9]]);
+    ok((await cel(1, 3)).join() === '255,0,0,255', 'wrap move: pixel re-enters from left', JSON.stringify(await cel(1, 3)));
+    ok((await cel(14, 2))[3] === 0, 'wrap move: original spot cleared');
+    await E(() => window.__pixelStudio.undo());
+    ok((await cel(14, 2)).join() === '255,0,0,255', 'wrap move undo restores');
+    await E(() => window.__pixelStudio.setUI({ wrapMove: false }));
+    await stroke([[8, 8], [11, 9]]);
+    ok((await cel(1, 3))[3] === 0, 'without wrap pixel is clipped');
   };
   S.custombrush = async () => {
     await newProject(16, 16, 'cb');

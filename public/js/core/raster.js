@@ -186,6 +186,21 @@ export function blendInto(dst, src, opacity = 1, blend = 'normal') {
 }
 
 // Copy src (sw×sh) into a new w×h buffer with offset (ox, oy). Used for canvas resize / crop.
+// Shift a buffer by (ox,oy) with wrap-around (for seamless tiles). Same size in/out.
+export function wrapShift(src, w, h, ox = 0, oy = 0) {
+  const out = createBuffer(w, h);
+  const mx = ((ox % w) + w) % w, my = ((oy % h) + h) % h;
+  for (let y = 0; y < h; y++) {
+    const ty = (y + my) % h;
+    for (let x = 0; x < w; x++) {
+      const tx = (x + mx) % w;
+      const si = (y * w + x) * 4, di = (ty * w + tx) * 4;
+      out[di] = src[si]; out[di + 1] = src[si + 1]; out[di + 2] = src[si + 2]; out[di + 3] = src[si + 3];
+    }
+  }
+  return out;
+}
+
 export function reframe(src, sw, sh, w, h, ox = 0, oy = 0) {
   const out = createBuffer(w, h);
   for (let y = 0; y < sh; y++) {

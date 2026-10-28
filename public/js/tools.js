@@ -2,7 +2,7 @@
 import { app, emit, commit, activeLayer, activeKey, activeFrame, W, H, setUI, toast, getCelBuf } from './state.js';
 import {
   createBuffer, setPixel, getPixel, linePoints, rectPoints, ellipsePoints, floodFill, ditherHit, polygonMask,
-  pasteOver, flipBuffer, rotateBuffer, reframe, isEmpty, compositeLayers, rgbaToHex, celKey, b64ToBytes,
+  pasteOver, flipBuffer, rotateBuffer, reframe, wrapShift, isEmpty, compositeLayers, rgbaToHex, celKey, b64ToBytes,
 } from './core/raster.js';
 import { shadeStep, nearestPaletteColor } from './core/palettes.js';
 
@@ -205,6 +205,10 @@ export function down(pt, info) {
   }
 }
 
+function shiftCel(orig, dx, dy) {
+  return app.ui.wrapMove ? wrapShift(orig, W(), H(), dx, dy) : reframe(orig, W(), H(), W(), H(), dx, dy);
+}
+
 export function move(pt, info) {
   if (!stroke) return;
   const x = Math.floor(pt.x), y = Math.floor(pt.y);
@@ -260,7 +264,7 @@ export function move(pt, info) {
     }
     case 'movecel': {
       st.dx = x - st.sx; st.dy = y - st.sy;
-      for (const c of st.all || [st]) app.overrides.set(c.key, reframe(c.orig, W(), H(), W(), H(), st.dx, st.dy));
+      for (const c of st.all || [st]) app.overrides.set(c.key, shiftCel(c.orig, st.dx, st.dy));
       emit('canvas');
       break;
     }
@@ -285,7 +289,7 @@ export function up(pt, info) {
       break;
     case 'movecel':
       for (const c of st.all || [st]) app.overrides.delete(c.key);
-      if (st.dx || st.dy) commit(st.all ? '連動移動圖層' : '移動圖層內容', () => { for (const c of st.all || [st]) setCel(c.key, reframe(c.orig, W(), H(), W(), H(), st.dx, st.dy)); });
+      if (st.dx || st.dy) commit(st.all ? '連動移動圖層' : '移動圖層內容', () => { for (const c of st.all || [st]) setCel(c.key, shiftCel(c.orig, st.dx, st.dy)); });
       else emit('canvas');
       break;
     case 'eyedropper':
