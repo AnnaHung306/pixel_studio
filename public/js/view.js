@@ -207,7 +207,8 @@ function render() {
 
   // brush cursor
   if (hover && ['pencil', 'eraser', 'line', 'rect', 'ellipse'].includes(app.ui.tool) && !tools.isStroking()) {
-    const s = app.ui.brushSize, lo = -Math.floor((s - 1) / 2);
+    const cbr = app.ui.brushShape === 'custom' && app.ui.customBrush;
+    const s = cbr ? Math.max(cbr.w, cbr.h) : app.ui.brushSize, lo = cbr ? Math.min(cbr.ox, cbr.oy) : -Math.floor((s - 1) / 2);
     const hx = Math.floor(hover.x) + lo, hy = Math.floor(hover.y) + lo;
     ctx.strokeStyle = '#fff'; ctx.lineWidth = 1;
     ctx.strokeRect(Math.round(ox + hx * zz) + 0.5, Math.round(oy + hy * zz) + 0.5, Math.round(s * zz) - 1, Math.round(s * zz) - 1);

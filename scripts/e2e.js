@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1632,6 +1632,20 @@ async function runProfile(name, target, base) {
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent pixels stay transparent');
     await E(() => window.__pixelStudio.undo());
     ok(await E(() => window.__e2e.cel(4, 3)[0]) === 10, 'undo restores colour');
+  };
+  S.custombrush = async () => {
+    await newProject(16, 16, 'cb');
+    await setPrimary([255, 0, 0, 255]);
+    await tool('select');
+    await E(() => { const a = window.__pixelStudio.app; const m = new Uint8Array(256); [[4, 4], [5, 4], [4, 5]].forEach(([x, y]) => (m[y * 16 + x] = 1)); a.selection = { mask: m, x: 4, y: 4, w: 2, h: 2 }; window.__pixelStudio.emit && window.__pixelStudio.emit('ui'); });
+    await E(() => { const b = [...document.querySelectorAll('#optionsbar button')].find((x) => x.textContent === '設為筆刷'); if (b) b.click(); });
+    const cb = await E(() => window.__pixelStudio.app.ui.customBrush);
+    ok(cb && cb.pts.length === 3, 'custom brush has 3 pixels', JSON.stringify(cb));
+    ok(await E(() => window.__pixelStudio.app.ui.brushShape) === 'custom' && await E(() => window.__pixelStudio.app.ui.tool) === 'pencil', 'switched to pencil with custom shape');
+    await E(() => { window.__pixelStudio.app.selection = null; });
+    await E(() => window.__e2e.stroke([[10, 10]], 'pen'));
+    const on = await E(() => [[10, 10], [11, 10], [10, 11], [11, 11]].map(([x, y]) => window.__e2e.cel(x, y)[3]));
+    ok(on.filter((a) => a === 255).length === 3 && on.filter((a) => a === 0).length === 1, 'stamp paints the L shape only', JSON.stringify(on));
   };
   S.grayhue = async () => {
     await newProject(16, 16, 'gh');

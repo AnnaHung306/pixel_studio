@@ -34,7 +34,28 @@ function editable() {
   if (!L.visible) { toast('此圖層已隱藏，請先顯示'); return false; }
   return true;
 }
+// Custom brush: selection mask → list of offsets centred on the stamp point.
+export function customBrushFromSelection(sel, maxDim = 64) {
+  if (!sel || !sel.mask) return null;
+  const { mask, x: sx, y: sy, w, h } = sel;
+  const pts = [];
+  const gw = sel.gw || W();
+  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+    const X = sx + i, Y = sy + j;
+    if (X < 0 || Y < 0 || X >= gw || Y >= H()) continue;
+    if (mask[Y * gw + X]) { x0 = Math.min(x0, i); x1 = Math.max(x1, i); y0 = Math.min(y0, j); y1 = Math.max(y1, j); }
+  }
+  if (x1 < 0 || x1 - x0 + 1 > maxDim || y1 - y0 + 1 > maxDim) return null;
+  const cx = Math.floor((x0 + x1) / 2), cy = Math.floor((y0 + y1) / 2);
+  for (let j = y0; j <= y1; j++) for (let i = x0; i <= x1; i++) {
+    const X = sx + i, Y = sy + j;
+    if (X >= 0 && Y >= 0 && X < gw && Y < H() && mask[Y * gw + X]) pts.push([i - cx, j - cy]);
+  }
+  return { pts, w: x1 - x0 + 1, h: y1 - y0 + 1, ox: x0 - cx, oy: y0 - cy };
+}
 function brushOffsets(s = app.ui.brushSize) {
+  if (app.ui.brushShape === 'custom' && app.ui.customBrush) return app.ui.customBrush.pts;
   const out = [];
   const lo = -Math.floor((s - 1) / 2);
   const c = (s - 1) / 2;

@@ -1,7 +1,7 @@
 // UI panels: toolbar, options bar, color editor, palette, timeline (layers × frames), onion skin, references, history, preview.
 import { app, on, emit, setUI, commit, undo, redo, jumpHistory, activeLayer, layerIndex, toast, celKey, historyBytes } from './state.js';
 import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confirmBox, capture, claimPencil } from './dom.js';
-import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, dropFloating, cancelFloating } from './tools.js';
+import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, customBrushFromSelection, dropFloating, cancelFloating } from './tools.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
 import { PALETTES, parsePaletteFile, paletteToHex, paletteToGpl, makeRamp, shadeStep } from './core/palettes.js';
@@ -66,7 +66,8 @@ export function renderOptions() {
   };
   const shapeCtl = () => h('span', { class: 'grp' },
     h('button', { class: 'tb' + (app.ui.brushShape === 'square' ? ' on' : ''), onclick: () => setUI({ brushShape: 'square' }), title: '方形筆刷' }, '■'),
-    h('button', { class: 'tb' + (app.ui.brushShape === 'circle' ? ' on' : ''), onclick: () => setUI({ brushShape: 'circle' }), title: '圓形筆刷' }, '●'));
+    h('button', { class: 'tb' + (app.ui.brushShape === 'circle' ? ' on' : ''), onclick: () => setUI({ brushShape: 'circle' }), title: '圓形筆刷' }, '●'),
+    app.ui.customBrush ? h('button', { class: 'tb' + (app.ui.brushShape === 'custom' ? ' on' : ''), onclick: () => setUI({ brushShape: 'custom' }), title: '自訂筆刷（由選取範圍建立）' }, '◆') : null);
   const dither = () => {
     const sel = h('select', { onchange: () => setUI({ dither: sel.value }), title: '抖動圖樣筆刷' },
       [['', '無抖動'], ['checker', '棋盤 50%'], ['25', '25%'], ['12', '12%'], ['75', '75%'], ['hlines', '橫線'], ['vlines', '直線']].map(([v, l]) => h('option', { value: v, selected: app.ui.dither === v }, l)));
@@ -107,6 +108,7 @@ function selectionButtons() {
     b('⇆ 翻轉', () => transformSelection('flipH'), '水平翻轉 (Shift+H)'), b('⇅ 翻轉', () => transformSelection('flipV'), '垂直翻轉 (Shift+V)'),
     b('↻ 90°', () => transformSelection('rotCW')), b('↺ 90°', () => transformSelection('rotCCW')),
     b('裁切畫布', A.cropToSelection, '裁切到選取範圍'),
+    b('設為筆刷', () => { const cb = customBrushFromSelection(app.selection); if (!app.selection) return toast('請先建立選取範圍'); if (!cb) return toast('選取範圍為空或超過 64×64'); setUI({ customBrush: cb, brushShape: 'custom', tool: 'pencil' }); toast('已建立自訂筆刷（◆）'); }, '把選取範圍的形狀設為筆刷（用目前顏色蓋印）'),
   ];
 }
 export function renderFloatActions() {
