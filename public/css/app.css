@@ -286,3 +286,10 @@ html.touch input[type=checkbox] { width: 22px; height: 22px; }
 #qpal .qp { width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 6px; position: relative; }
 #qpal .qp span { position: absolute; inset: 0; border-radius: 5px; }
 #qpal .qp.sel { outline: 2px solid var(--accent, #4a8cff); }
+
+/* 左手模式 (1.28.0)：寬螢幕左右對調 */
+@media (min-width: 761px) {
+  #app.lefty #main { flex-direction: row-reverse; }
+  #app.lefty #toolbar { border-right: 0; border-left: 1px solid var(--line); }
+  #app.lefty #sidepanel { border-left: 0; border-right: 1px solid var(--line); }
+}

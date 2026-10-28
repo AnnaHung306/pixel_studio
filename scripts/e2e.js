@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1681,6 +1681,18 @@ async function runProfile(name, target, base) {
     await setPrimary([0, 255, 0, 255]);
     await menu('加內框');
     ok(await E(() => window.__e2e.cel(5, 5)[1]) === 0 && await E(() => window.__e2e.cel(4, 4)[1]) === 255, 'inner outline recolors edge pixels, keeps centre');
+  };
+  S.lefthand = async () => {
+    await newProject(16, 16, 'lh');
+    const xs = () => E(() => ({ t: document.getElementById('toolbar').getBoundingClientRect().left, s: document.getElementById('sidepanel').getBoundingClientRect().left }));
+    await E(() => window.__pixelStudio.setUI({ leftHand: false }));
+    const a = await xs();
+    await E(() => window.__pixelStudio.setUI({ leftHand: true }));
+    await settle(100);
+    const b = await xs();
+    if (a.t < a.s && (await E(() => window.innerWidth)) > 760) ok(b.t > b.s, 'left-hand mode swaps toolbar and side panel', JSON.stringify([a, b]));
+    else ok(await E(() => document.getElementById('app').classList.contains('lefty')), 'lefty class set');
+    await E(() => window.__pixelStudio.setUI({ leftHand: false }));
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');

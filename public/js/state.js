@@ -19,7 +19,7 @@ export const app = {
     zoom: 8, panX: 0, panY: 0, showGrid: true, tilePreview: false,
     customGrid: { on: false, w: 8, h: 8, color: '#5b8cff' },
     onion: { on: false, prev: 1, next: 1, opacity: 0.4, tint: true, prevColor: '#ff3030', nextColor: '#3080ff' },
-    refsAbove: true, penOnly: false, playing: false, loopMode: 'loop', playTag: '', speed: 1,
+    refsAbove: true, penOnly: false, leftHand: false, playing: false, loopMode: 'loop', playTag: '', speed: 1,
     frameSel: null, // [from,to] multi-frame selection for tags
   },
   selection: null, // { mask: Uint8Array, x, y, w, h }

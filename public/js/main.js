@@ -169,6 +169,7 @@ function refreshDoc() {
   });
 }
 let lastUiKey = '';
+on('ui', () => document.getElementById('app').classList.toggle('lefty', !!app.ui.leftHand));
 on('ui', (patch) => {
   // zoom/pan changes only need the zoom label
   const keys = Object.keys(patch || {});
@@ -537,8 +538,8 @@ async function boot() {
   on('ui', () => {
     clearTimeout(boot.pt);
     boot.pt = setTimeout(() => {
-      const { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither, shadeInk, longPressMs, paletteLock, customBrush } = app.ui;
-      store.setSetting('uiPrefs', { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither, shadeInk, longPressMs, paletteLock, customBrush });
+      const { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither, shadeInk, longPressMs, paletteLock, customBrush } = app.ui;
+      store.setSetting('uiPrefs', { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, shapeFilled, symX, symY, dither, shadeInk, longPressMs, paletteLock, customBrush });
     }, 500);
   });
   let doc = null;

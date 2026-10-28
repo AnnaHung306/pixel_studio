@@ -98,7 +98,7 @@ export function renderOptions() {
   } else if (t === 'hand') {
     add(h('button', { class: 'tb', onclick: fitView }, '符合視窗'));
   }
-  add(h('span', { class: 'spacer' }), tog('✍️ 僅筆繪圖', 'penOnly', '防誤觸：開啟後手指只能平移 / 縮放，只有 Apple Pencil / 觸控筆可以繪圖'));
+  add(h('span', { class: 'spacer' }), tog('🤚 左手模式', 'leftHand', '介面左右對調：工具列移到右側、面板移到左側（寬螢幕）'), tog('✍️ 僅筆繪圖', 'penOnly', '防誤觸：開啟後手指只能平移 / 縮放，只有 Apple Pencil / 觸控筆可以繪圖'));
 }
 function selectionButtons() {
   const b = (label, fn, title) => h('button', { class: 'tb', onclick: fn, title: title || label }, label);
