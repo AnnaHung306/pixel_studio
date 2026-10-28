@@ -1175,7 +1175,7 @@ async function runProfile(name, target, base) {
       ok((await bar.textContent()).includes('7 天'), 'notice explains the 7-day Safari clearing risk');
       if (prof.touch) {
         const sizes = await E(() => [...document.querySelectorAll('#notice-bar button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
-        ok(sizes.length === 3 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'notice buttons ≥ 44pt', JSON.stringify(sizes));
+        ok(sizes.length === 2 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'notice buttons ≥ 44pt', JSON.stringify(sizes));
       }
       await layoutOk('install notice');
       await tap('#notice-bar [data-act=how]');
