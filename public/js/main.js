@@ -1,4 +1,5 @@
 // Pixel Studio — app bootstrap: wiring, menus, keyboard shortcuts, autosave, playback.
+import { hexToRgba, rgbaToHex } from './core/raster.js';
 import { app, on, emit, setDoc, newDoc, undo, redo, setUI, toast, historyBytes } from './state.js';
 import { initView, fitView, zoomAt, getDocCanvas, isTyping } from './view.js';
 import * as P from './panels.js';
@@ -263,6 +264,17 @@ function bindTopbar() {
   $('qt-pick').onclick = () => oneShot('eyedropper');
   $('qt-erase').onclick = () => oneShot('eraser');
   on('ui', () => { for (const [b, t] of [['qt-pick', 'eyedropper'], ['qt-erase', 'eraser']]) { const el = $(b); el.classList.toggle('on', app.ui.oneShot === t); el.setAttribute('aria-pressed', String(app.ui.oneShot === t)); } });
+  const qpal = $('qpal');
+  const renderQpal = () => {
+    qpal.innerHTML = '';
+    const p = rgbaToHex(app.ui.primary);
+    for (const hex of app.doc.meta.palette.slice(0, 64)) {
+      qpal.append(h('button', { class: 'qp checker' + (hex === p ? ' sel' : ''), title: hex, 'aria-label': `色 ${hex}`, onclick: () => { setUI({ primary: hexToRgba(hex) }); } }, h('span', { style: { background: hex } })));
+    }
+  };
+  $('qt-pal').onclick = () => { const open = qpal.classList.toggle('hidden') === false; $('qt-pal').classList.toggle('on', open); $('qt-pal').setAttribute('aria-pressed', String(open)); $('qt-pal').setAttribute('aria-expanded', String(open)); if (open) renderQpal(); };
+  on('ui', () => { if (!qpal.classList.contains('hidden')) renderQpal(); });
+  on('doc', () => { if (!qpal.classList.contains('hidden')) renderQpal(); });
   $('fp-exit').onclick = () => toggleFocus(false);
   $('fp-undo').onclick = () => undo();
   $('fp-redo').onclick = () => redo();

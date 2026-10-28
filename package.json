@@ -1,6 +1,6 @@
 {
   "name": "pixel-studio",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "description": "Pixel Studio — 觸控優先的像素繪圖 / 動畫 PWA，附可選的本機伺服器（AI REST API + MCP、即時同步）",
   "type": "module",
   "private": true,

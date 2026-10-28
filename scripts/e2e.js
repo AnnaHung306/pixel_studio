@@ -1175,7 +1175,7 @@ async function runProfile(name, target, base) {
       ok((await bar.textContent()).includes('7 天'), 'notice explains the 7-day Safari clearing risk');
       if (prof.touch) {
         const sizes = await E(() => [...document.querySelectorAll('#notice-bar button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
-        ok(sizes.length === 2 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'notice buttons ≥ 44pt', JSON.stringify(sizes));
+        ok(sizes.length === 3 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'notice buttons ≥ 44pt', JSON.stringify(sizes));
       }
       await layoutOk('install notice');
       await tap('#notice-bar [data-act=how]');
@@ -1420,7 +1420,7 @@ async function runProfile(name, target, base) {
     ok(await E(() => window.__e2e.cel(3, 3)[3]) === 255, 'baseline pencil draws');
     if (prof.touch) {
       const sizes = await E(() => [...document.querySelectorAll('#quick-tools button')].map((b) => { const r = b.getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height)]; }));
-      ok(sizes.length === 2 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'quick buttons ≥ 44pt', JSON.stringify(sizes));
+      ok(sizes.length === 3 && sizes.every(([w, h]) => w >= 44 && h >= 44), 'quick buttons ≥ 44pt', JSON.stringify(sizes));
     }
     await tap('#qt-erase');
     ok(await E(() => document.getElementById('qt-erase').getAttribute('aria-pressed')) === 'true', 'erase armed');
@@ -1435,6 +1435,15 @@ async function runProfile(name, target, base) {
     await E(() => window.__e2e.stroke([[4, 3]], 'pen'));
     ok(await E(() => window.__e2e.cel(4, 3)[3]) === 255, 'eyedropper one-shot did not erase/paint');
     ok((await ui('primary')).join() === '10,200,10,255', 'eyedropper one-shot picked the canvas colour');
+    await tap('#qt-pal');
+    ok(await E(() => !document.getElementById('qpal').classList.contains('hidden') && document.querySelectorAll('#qpal .qp').length > 0), 'quick palette opens with swatches');
+    await tap('#qpal .qp:nth-child(2)');
+    const want = await E(() => document.querySelectorAll('#qpal .qp')[1].title);
+    const pr = await ui('primary');
+    const hx = '#' + [0, 1, 2].map((i) => pr[i].toString(16).padStart(2, '0')).join('');
+    ok(hx.toLowerCase() === want.slice(0, 7).toLowerCase(), 'quick palette sets primary', hx + ' vs ' + want);
+    await tap('#qt-pal');
+    ok(await E(() => document.getElementById('qpal').classList.contains('hidden')), 'quick palette closes');
   };
   S.taps = async () => {
     await newProject(16, 16, 'taps');
