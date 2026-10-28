@@ -95,6 +95,7 @@ input[type=range] { accent-color: var(--acc); }
 .ce-row { display: flex; gap: 4px; margin-top: 6px; align-items: center; }
 .ce-row input { width: 100%; }
 .ce-row .ce-hex { flex: 2; font-family: ui-monospace, Consolas, monospace; }
+.ce-prev { width: 44px; height: 44px; border-radius: 6px; overflow: hidden; flex: none; border: 1px dashed var(--line); padding: 0; background: none; }
 .ce-cur { width: 32px; height: 28px; border-radius: 6px; overflow: hidden; flex: none; border: 1px solid var(--line); }
 
 /* layers / refs / history lists */

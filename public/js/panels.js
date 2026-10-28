@@ -124,6 +124,7 @@ export function renderFloatActions() {
 // ---------- color editor (HSV + alpha + hex) ----------
 let hsv = { h: 0, s: 0, v: 0, a: 255 };
 let lastColorKey = '';
+let origColor = null; // colour before the current slider/hex edit (iter 44, B45)
 function rgbToHsv([r, g, b]) {
   r /= 255; g /= 255; b /= 255;
   const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
@@ -146,6 +147,7 @@ export function renderColorEditor() {
   const key = c.join(',') + app.ui.activeSlot;
   if (ce && key === lastColorKey) return;
   lastColorKey = key;
+  origColor = null;
   const fromColor = rgbToHsv(c);
   const rgbNow = hsvToRgb(hsv.h, hsv.s, hsv.v);
   if (rgbNow.join() !== c.slice(0, 3).join()) hsv = { ...fromColor, h: fromColor.s === 0 || fromColor.v === 0 ? hsv.h : fromColor.h };
@@ -156,26 +158,27 @@ export function renderColorEditor() {
     const alpha = h('canvas', { class: 'ce-bar checker', width: 200, height: 16 });
     const hex = h('input', { type: 'text', class: 'ce-hex', maxlength: 9, title: '十六進位色碼 #RRGGBB 或 #RRGGBBAA' });
     const cur = h('div', { class: 'ce-cur checker' }, h('span', { class: 'swatch-fill' }));
+    const prev = h('button', { class: 'ce-prev checker', title: '還原為編輯前的顏色', 'aria-label': '還原為編輯前的顏色', style: { display: 'none' }, onclick: () => { if (origColor) { const o = origColor; origColor = null; setCur(o); } } }, h('span', { class: 'swatch-fill' }));
     const addBtn = h('button', { class: 'sb', title: '加入調色盤', onclick: () => A.addPaletteColor(curColor()) }, '＋色盤');
-    hex.addEventListener('change', () => { try { setCur(hexToRgba(hex.value)); } catch { toast('色碼格式錯誤'); } });
+    hex.addEventListener('change', () => { try { const o = curColor().slice(); setCur(hexToRgba(hex.value)); origColor = o; draw(); } catch { toast('色碼格式錯誤'); } });
     const drag = (el, fn) => {
       const handle = (e) => { const r = el.getBoundingClientRect(); fn(Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)), Math.max(0, Math.min(1, (e.clientY - r.top) / r.height))); };
       claimPencil(el);
-      el.addEventListener('pointerdown', (e) => { capture(el, e.pointerId); handle(e); el.onpointermove = handle; });
+      el.addEventListener('pointerdown', (e) => { capture(el, e.pointerId); if (!origColor) origColor = curColor().slice(); handle(e); el.onpointermove = handle; });
       el.addEventListener('pointerup', () => (el.onpointermove = null));
     };
     const apply = () => { const rgb = hsvToRgb(hsv.h, hsv.s, hsv.v); lastColorKey = [...rgb, hsv.a].join(',') + app.ui.activeSlot; setCur([...rgb, hsv.a]); draw(); };
     drag(sv, (x, y) => { hsv.s = x; hsv.v = 1 - y; apply(); });
     drag(hue, (x) => { hsv.h = x * 359.9; apply(); });
     drag(alpha, (x) => { hsv.a = Math.round(x * 255); apply(); });
-    root.append(sv, hue, alpha, h('div', { class: 'ce-row' }, cur, hex, addBtn),
+    root.append(sv, hue, alpha, h('div', { class: 'ce-row' }, cur, prev, hex, addBtn),
       h('div', { class: 'ce-row' }, h('button', { class: 'sb', title: '較暗一階（快捷鍵 <）', onclick: () => shade(-1) }, '◐ 較暗'), h('button', { class: 'sb', title: '較亮一階（快捷鍵 >）', onclick: () => shade(1) }, '◑ 較亮')));
-    ce = { sv, hue, alpha, hex, cur };
+    ce = { sv, hue, alpha, hex, cur, prev };
   }
   draw();
 }
 function draw() {
-  const { sv, hue, alpha, hex, cur } = ce;
+  const { sv, hue, alpha, hex, cur, prev } = ce;
   let g = sv.getContext('2d');
   const [r, gg, b] = hsvToRgb(hsv.h, 1, 1);
   g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(0, 0, 200, 120);
@@ -196,6 +199,9 @@ function draw() {
   const c = curColor();
   if (document.activeElement !== hex) hex.value = rgbaToHex(c, c[3] !== 255);
   cur.firstChild.style.background = colorBg(c);
+  const showPrev = !!origColor && origColor.join() !== c.join();
+  prev.style.display = showPrev ? '' : 'none';
+  if (showPrev) prev.firstChild.style.background = colorBg(origColor);
 }
 
 // ---------- palette ----------

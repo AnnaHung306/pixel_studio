@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1673,6 +1673,19 @@ async function runProfile(name, target, base) {
     const d = await E(() => window.__e2e.cel(4, 3));
     ok(d[0] === 184 && d[1] === 104 && d[2] === 24, 'saturation -20%', JSON.stringify(d));
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent stays transparent');
+  };
+  S.colorrevert = async () => {
+    await newProject(16, 16, 'cr');
+    await setPrimary([10, 20, 30, 255]);
+    await openSheet('color');
+    ok(await E(() => getComputedStyle(document.querySelector('#color-editor .ce-prev')).display) === 'none', 'revert hidden before edit');
+    await E(() => { const el = document.querySelector('#color-editor .ce-sv'); const r = el.getBoundingClientRect(); const o = { pointerId: 7, pointerType: 'touch', bubbles: true, clientX: r.left + r.width * 0.9, clientY: r.top + r.height * 0.1 }; el.dispatchEvent(new PointerEvent('pointerdown', o)); el.dispatchEvent(new PointerEvent('pointerup', o)); });
+    ok((await ui('primary')).join() !== '10,20,30,255', 'edit changed colour');
+    ok(await E(() => getComputedStyle(document.querySelector('#color-editor .ce-prev')).display) !== 'none', 'revert shown after edit');
+    await E(() => document.querySelector('#color-editor .ce-prev').click());
+    ok((await ui('primary')).join() === '10,20,30,255', 'revert restores original colour', JSON.stringify(await ui('primary')));
+    await E(() => new Promise((r) => setTimeout(r, 150)));
+    ok(await E(() => getComputedStyle(document.querySelector('#color-editor .ce-prev')).display) === 'none', 'revert hidden after revert');
   };
   S.pvmark = async () => {
     await newProject(16, 16, 'pv');
