@@ -41,3 +41,20 @@ test('palette files: .gpl and .hex parse and re-export', () => {
   assert.deepEqual(parsePaletteFile(paletteToHex(cols), 'x.hex'), cols);
   assert.deepEqual(parsePaletteFile('nonsense\n#12345', 'x.hex'), []);
 });
+
+import { sheetGeometry } from '../../public/js/formats.js';
+test('sheetGeometry: no padding matches plain strips and grids', () => {
+  const g = sheetGeometry(4, 16, 8, 'horizontal');
+  assert.deepEqual([g.width, g.height], [64, 8]);
+  const v = sheetGeometry(3, 16, 8, 'vertical');
+  assert.deepEqual([v.width, v.height], [16, 24]);
+  const gr = sheetGeometry(5, 10, 10, 'grid', 2);
+  assert.deepEqual([gr.cols, gr.rows, gr.width, gr.height], [2, 3, 20, 30]);
+  assert.deepEqual(gr.cells[3], { x: 10, y: 10 });
+});
+test('sheetGeometry: padding surrounds and separates frames', () => {
+  const g = sheetGeometry(3, 16, 16, 'horizontal', 8, 2);
+  assert.deepEqual([g.width, g.height], [3 * 16 + 4 * 2, 20]);
+  assert.deepEqual(g.cells.map((c) => c.x), [2, 20, 38]);
+  assert.equal(sheetGeometry(2, 4, 4, 'grid', 0, 999).pad, 64);
+});

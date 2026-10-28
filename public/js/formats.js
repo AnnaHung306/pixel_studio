@@ -304,3 +304,12 @@ function lzwDecode(data, minCode, npix) {
   }
   return out;
 }
+
+// Sprite-sheet geometry (pure). pad = transparent gap in source pixels between frames and around the sheet edge.
+export function sheetGeometry(n, w, h, layout = 'horizontal', columns = 8, pad = 0) {
+  pad = Math.max(0, Math.min(64, pad | 0));
+  const cols = layout === 'horizontal' ? n : layout === 'vertical' ? 1 : Math.max(1, Math.min(n, columns | 0 || 1));
+  const rows = Math.ceil(n / cols);
+  const cells = Array.from({ length: n }, (_, k) => ({ x: pad + (k % cols) * (w + pad), y: pad + Math.floor(k / cols) * (h + pad) }));
+  return { cols, rows, pad, width: cols * w + (cols + 1) * pad, height: rows * h + (rows + 1) * pad, cells };
+}

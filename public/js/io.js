@@ -2,7 +2,7 @@
 import { app, W, H, commit, uid, celKey, toast } from './state.js';
 import { compositeAll } from './actions.js';
 import { scaleNearest, createBuffer, reframe, isEmpty } from './core/raster.js';
-import { encodeGIF, encodeAPNG, encodePNG, makeZip, decodeGIF } from './formats.js';
+import { encodeGIF, encodeAPNG, encodePNG, makeZip, decodeGIF, sheetGeometry } from './formats.js';
 import { download, readAs, isIOS } from './dom.js';
 import { docToJSON, docFromJSON } from './storage.js';
 import { dropFloating } from './tools.js';
@@ -49,17 +49,16 @@ export async function exportFramesZip(scale, idxs) {
   download(makeZip(files), `${safeName()}-frames.zip`);
 }
 
-export async function exportSheet(scale, idxs, { layout = 'horizontal', columns = 8, zip = false } = {}) {
+export async function exportSheet(scale, idxs, { layout = 'horizontal', columns = 8, zip = false, pad = 0 } = {}) {
   dropFloating();
   const n = idxs.length, w = W(), h = H();
-  const cols = layout === 'horizontal' ? n : layout === 'vertical' ? 1 : Math.max(1, Math.min(n, columns));
-  const rows = Math.ceil(n / cols);
-  const SW = cols * w, SH = rows * h;
+  const geo = sheetGeometry(n, w, h, layout, columns, pad);
+  const SW = geo.width, SH = geo.height;
   const sheet = createBuffer(SW, SH);
   const framesJson = {};
   idxs.forEach((fi, k) => {
     const f = compositeAll(fi);
-    const ox = (k % cols) * w, oy = Math.floor(k / cols) * h;
+    const ox = geo.cells[k].x, oy = geo.cells[k].y;
     for (let y = 0; y < h; y++) sheet.set(f.subarray(y * w * 4, (y + 1) * w * 4), ((oy + y) * SW + ox) * 4);
     framesJson[`${safeName()} ${k}.png`] = {
       frame: { x: ox * scale, y: oy * scale, w: w * scale, h: h * scale }, rotated: false, trimmed: false,
@@ -72,7 +71,7 @@ export async function exportSheet(scale, idxs, { layout = 'horizontal', columns 
     frames: framesJson,
     meta: {
       app: 'Pixel Studio', version: APP_VERSION, image: imgName, format: 'RGBA8888',
-      size: { w: SW * scale, h: SH * scale }, scale: String(scale),
+      size: { w: SW * scale, h: SH * scale }, scale: String(scale), padding: geo.pad,
       frameTags: app.doc.meta.tags.map((t) => ({ name: t.name, from: Math.max(0, idxs.indexOf(t.from)), to: Math.max(0, idxs.indexOf(t.to)), direction: t.direction, color: t.color })),
       layers: app.doc.meta.layers.map((l) => ({ name: l.name, opacity: Math.round(l.opacity * 255), blendMode: l.blend })),
       slices: [],
