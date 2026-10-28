@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1595,6 +1595,25 @@ async function runProfile(name, target, base) {
     ok(await E(() => { const c = window.__e2e.cel(4, 3); return c[1] === 200 && c[0] === 10; }), 'behind ink keeps existing pixels');
     ok(await E(() => window.__e2e.cel(4, 8)[0]) === 250, 'behind ink paints empty pixels');
     await E(() => window.__pixelStudio.setUI({ shadeInk: '' }));
+  };
+  S.alphalock = async () => {
+    await newProject(16, 16, 'alock');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, brushSize: 1, brushShape: 'square', pressure: false, shadeInk: '', tool: 'pencil' }));
+    await setPrimary([200, 80, 80, 255]);
+    await stroke([[3, 3], [6, 3]], 'pen');
+    await E(() => { const a = window.__pixelStudio.app || null; });
+    const btn = await E(() => !!document.querySelector('button[aria-label="鎖定透明度"]'));
+    ok(btn, 'alpha-lock button exists in layer panel');
+    await E(() => document.querySelector('button[aria-label="鎖定透明度"]').click());
+    await setPrimary([10, 200, 10, 255]);
+    await stroke([[3, 3], [6, 3]], 'pen');
+    await stroke([[3, 8], [6, 8]], 'pen');
+    ok(await E(() => { const c = window.__e2e.cel(4, 3); return c[1] === 200 && c[0] === 10 && c[3] === 255; }), 'alpha lock recolors existing pixel');
+    ok(await E(() => window.__e2e.cel(4, 8)[3]) === 0, 'alpha lock blocks painting on empty pixels');
+    await E(() => window.__pixelStudio.setUI({ tool: 'eraser' }));
+    await stroke([[3, 3], [6, 3]], 'pen');
+    ok(await E(() => window.__e2e.cel(4, 3)[3]) === 255, 'alpha lock blocks eraser');
+    await E(() => window.__pixelStudio.setUI({ tool: 'pencil' }));
   };
   S.palettelock = async () => {
     await newProject(16, 16, 'plock');

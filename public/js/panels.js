@@ -324,6 +324,7 @@ export function renderTimeline() {
     const lh = h('div', { class: 'tl-lh' + (isCur ? ' cur' : ''), 'data-layer': L.id, style: { width: LH_W() + 'px' } },
       h('span', { class: 'grip', title: '拖曳調整順序' }, '⋮⋮'),
       h('button', { class: 'tiny' + (L.visible ? '' : ' off'), title: '顯示 / 隱藏', onclick: (e) => { e.stopPropagation(); A.updateLayer(L.id, { visible: !L.visible }, L.visible ? '隱藏圖層' : '顯示圖層'); } }, '👁'),
+      h('button', { class: 'tiny alock' + (L.alphaLock ? '' : ' off'), title: 'α 鎖：只改已有像素的顏色', 'aria-label': '鎖定透明度', onclick: (e) => { e.stopPropagation(); A.updateLayer(L.id, { alphaLock: !L.alphaLock }, L.alphaLock ? '解除鎖定透明度' : '鎖定透明度'); } }, 'α'),
       h('button', { class: 'tiny' + (L.locked ? '' : ' off'), title: '鎖定（鎖定後 AI 也無法寫入）', onclick: (e) => { e.stopPropagation(); A.updateLayer(L.id, { locked: !L.locked }, L.locked ? '解鎖圖層' : '鎖定圖層'); } }, L.locked ? '🔒' : '🔓'),
       h('span', { class: 'nm', title: `${L.name}（${Math.round(L.opacity * 100)}% · ${blendLabel(L.blend)}）雙擊編輯` }, L.name + (L.opacity < 1 ? ` ${Math.round(L.opacity * 100)}%` : '') + (L.blend !== 'normal' ? ' ✱' : '')));
     lh.addEventListener('click', () => A.selectLayer(L.id));

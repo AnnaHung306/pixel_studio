@@ -92,6 +92,7 @@ function plot(st, x, y) {
   if (app.selection && !app.selection.mask[p]) return;
   if (st.dither && !ditherHit(st.dither, x, y)) return;
   st.painted[p] = 1;
+  if (st.alock) return;
   if (st.shade) {
     const cur = getPixel(st.buf, w, h, x, y);
     if (!cur || cur[3] === 0) return;
@@ -139,7 +140,7 @@ export function down(pt, info) {
       const key = activeKey();
       const orig = app.doc.cels.get(key) || createBuffer(W(), H());
       const erase = tool === 'eraser';
-      stroke = { tool, key, orig, buf: orig.slice(), color: erase ? [0, 0, 0, 0] : color, erase, shade: !erase && (app.ui.shadeInk === 'dark' || app.ui.shadeInk === 'light') ? (app.ui.shadeInk === 'dark' ? -1 : 1) : 0, lock: !erase && app.ui.shadeInk === 'recolor', behind: !erase && app.ui.shadeInk === 'behind', dither: app.ui.dither, painted: new Uint8Array(W() * H()), path: [[x, y]], offs: brushOffsets(), pp: app.ui.pixelPerfect && app.ui.brushSize === 1, pr: !!app.ui.pressure && info.pointerType === 'pen' };
+      stroke = { tool, key, orig, buf: orig.slice(), color: erase ? [0, 0, 0, 0] : color, erase, shade: !erase && (app.ui.shadeInk === 'dark' || app.ui.shadeInk === 'light') ? (app.ui.shadeInk === 'dark' ? -1 : 1) : 0, lock: !erase && (app.ui.shadeInk === 'recolor' || !!activeLayer().alphaLock), alock: erase && !!activeLayer().alphaLock, behind: !erase && app.ui.shadeInk === 'behind', dither: app.ui.dither, painted: new Uint8Array(W() * H()), path: [[x, y]], offs: brushOffsets(), pp: app.ui.pixelPerfect && app.ui.brushSize === 1, pr: !!app.ui.pressure && info.pointerType === 'pen' };
       pressureSize(stroke, info);
       stamp(stroke, x, y);
       app.overrides.set(key, stroke.buf);
