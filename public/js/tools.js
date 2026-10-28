@@ -1,5 +1,5 @@
 // Interactive drawing tools, selection and floating-selection logic.
-import { app, emit, commit, activeLayer, activeKey, W, H, setUI, toast, getCelBuf } from './state.js';
+import { app, emit, commit, activeLayer, activeKey, activeFrame, W, H, setUI, toast, getCelBuf } from './state.js';
 import {
   createBuffer, setPixel, getPixel, linePoints, rectPoints, ellipsePoints, floodFill, ditherHit, polygonMask,
   pasteOver, flipBuffer, rotateBuffer, reframe, isEmpty, compositeLayers, rgbaToHex, celKey, b64ToBytes,
@@ -189,8 +189,17 @@ export function down(pt, info) {
       if (!editable()) return;
       const key = activeKey();
       const orig = app.doc.cels.get(key);
-      if (!orig) return;
-      stroke = { tool: 'movecel', key, orig, sx: x, sy: y, dx: 0, dy: 0 };
+      let all = null;
+      if (app.ui.linkMove) {
+        all = [];
+        for (const L of app.doc.meta.layers) {
+          if (L.locked || !L.visible) continue;
+          const k = celKey(L.id, activeFrame().id), o = app.doc.cels.get(k);
+          if (o) all.push({ key: k, orig: o });
+        }
+        if (!all.length) return;
+      } else if (!orig) return;
+      stroke = { tool: 'movecel', key, orig, all, sx: x, sy: y, dx: 0, dy: 0 };
       break;
     }
   }
@@ -251,7 +260,7 @@ export function move(pt, info) {
     }
     case 'movecel': {
       st.dx = x - st.sx; st.dy = y - st.sy;
-      app.overrides.set(st.key, reframe(st.orig, W(), H(), W(), H(), st.dx, st.dy));
+      for (const c of st.all || [st]) app.overrides.set(c.key, reframe(c.orig, W(), H(), W(), H(), st.dx, st.dy));
       emit('canvas');
       break;
     }
@@ -275,8 +284,8 @@ export function up(pt, info) {
       else updateSelPreview(st, true);
       break;
     case 'movecel':
-      app.overrides.delete(st.key);
-      if (st.dx || st.dy) commit('移動圖層內容', () => setCel(st.key, reframe(st.orig, W(), H(), W(), H(), st.dx, st.dy)));
+      for (const c of st.all || [st]) app.overrides.delete(c.key);
+      if (st.dx || st.dy) commit(st.all ? '連動移動圖層' : '移動圖層內容', () => { for (const c of st.all || [st]) setCel(c.key, reframe(c.orig, W(), H(), W(), H(), st.dx, st.dy)); });
       else emit('canvas');
       break;
     case 'eyedropper':
@@ -291,6 +300,7 @@ export function cancel() {
   const st = stroke;
   stroke = null;
   if (st.key) app.overrides.delete(st.key);
+  if (st.all) for (const c of st.all) app.overrides.delete(c.key);
   if (st.tool === 'movefloat' && app.floating) { app.floating.x = st.fx; app.floating.y = st.fy; refreshFloating(); }
   if ((st.tool === 'select' || st.tool === 'lasso')) app.selection = st.base;
   emit('canvas');

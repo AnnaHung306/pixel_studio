@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1693,6 +1693,25 @@ async function runProfile(name, target, base) {
     });
     ok(!m.vis || m.mark === '3,4', 'preview marks hovered pixel when visible', JSON.stringify(m));
     await E(() => document.dispatchEvent(new CustomEvent('ps-hover', { detail: null })));
+  };
+  S.linkmove = async () => {
+    await newProject(16, 16, 'lm');
+    await setPrimary([255, 0, 0, 255]);
+    await stroke([[2, 2], [2, 2]]);
+    await E(() => window.__pixelStudio.A.addLayer());
+    await setPrimary([0, 0, 255, 255]);
+    await stroke([[5, 5], [5, 5]]);
+    await tool('move');
+    await stroke([[8, 8], [10, 9]]);
+    ok((await cel(5, 5, 1))[3] === 0 && (await cel(7, 6, 1)).join() === '0,0,255,255', 'move without link moves only active layer', JSON.stringify(await cel(7, 6, 1)));
+    ok((await cel(2, 2, 0)).join() === '255,0,0,255', 'other layer stays put when unlinked');
+    await E(() => window.__pixelStudio.undo());
+    await E(() => window.__pixelStudio.setUI({ linkMove: true }));
+    await stroke([[8, 8], [10, 9]]);
+    ok((await cel(4, 3, 0)).join() === '255,0,0,255' && (await cel(7, 6, 1)).join() === '0,0,255,255', 'linked move shifts all layers', JSON.stringify([await cel(4, 3, 0), await cel(7, 6, 1)]));
+    await E(() => window.__pixelStudio.undo());
+    ok((await cel(2, 2, 0)).join() === '255,0,0,255' && (await cel(5, 5, 1)).join() === '0,0,255,255', 'one undo restores all layers');
+    await E(() => window.__pixelStudio.setUI({ linkMove: false }));
   };
   S.custombrush = async () => {
     await newProject(16, 16, 'cb');

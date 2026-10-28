@@ -95,6 +95,7 @@ export function renderOptions() {
       h('button', { class: 'tb' + (app.ui.sampleLayer ? ' on' : ''), onclick: () => setUI({ sampleLayer: true }) }, '取樣：目前圖層')));
   } else if (['select', 'lasso', 'move'].includes(t)) {
     add(...selectionButtons());
+    if (t === 'move') add(tog('🔗 連動所有圖層', 'linkMove', '移動時同時移動此影格所有可見且未鎖定的圖層'));
   } else if (t === 'hand') {
     add(h('button', { class: 'tb', onclick: fitView }, '符合視窗'));
   }
