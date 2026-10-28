@@ -1556,7 +1556,15 @@ async function runProfile(name, target, base) {
     ok(hard > light * 2, `pen pressure scales brush (${light} < ${hard}; off=${off})`);
     await stroke([[4, 4], [6, 4]], 'mouse', { pressure: 0.1 });
     ok(await count() === off, 'mouse ignores pressure');
-    await E(() => window.__pixelStudio.setUI({ pressure: false, brushSize: 1 }));
+    await E(() => window.__pixelStudio.undo());
+    await E(() => window.__pixelStudio.setUI({ pressureMin: 0.5 }));
+    await new Promise((r) => setTimeout(r, 300));
+    await stroke([[4, 4], [6, 4]], 'pen', { pressure: 0.4 });
+    const dead = await count();
+    await E(() => window.__pixelStudio.undo());
+    ok(dead < light || dead <= 3, `pressure threshold keeps light touch small (${dead})`);
+    ok(await E(() => !!document.querySelector('#pressureMin')), 'threshold selector shown when pressure on');
+    await E(() => window.__pixelStudio.setUI({ pressure: false, pressureMin: 0, brushSize: 1 }));
   };
   S.shadeink = async () => {
     await newProject(16, 16, 'shadeink');

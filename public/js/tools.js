@@ -49,10 +49,11 @@ function brushOffsets(s = app.ui.brushSize) {
   return out;
 }
 // Apple Pencil pressure → brush size (opt-in). Pressure 0..1 maps to 1..brushSize.
-export function pressureSizeFor(p, max) { return Math.max(1, Math.round(1 + (max - 1) * Math.min(1, Math.max(0, p)))); }
+// min = dead zone (0..0.5): pressure at or below it stays at size 1 (light palm touches), the rest is rescaled.
+export function pressureSizeFor(p, max, min = 0) { const lo = Math.min(0.9, Math.max(0, min || 0)); const n = Math.min(1, Math.max(0, (p - lo) / (1 - lo))); return Math.max(1, Math.round(1 + (max - 1) * n)); }
 function pressureSize(st, info) {
   if (!st.pr || !(info.pressure > 0)) return;
-  const s = pressureSizeFor(info.pressure, app.ui.brushSize);
+  const s = pressureSizeFor(info.pressure, app.ui.brushSize, app.ui.pressureMin);
   if (s !== st.sz) { st.sz = s; st.offs = brushOffsets(s); }
 }
 function symPoints(x, y) {

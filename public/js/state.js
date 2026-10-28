@@ -14,7 +14,7 @@ export const app = {
   ui: {
     layerId: null, frame: 0, tool: 'pencil', prevTool: null,
     primary: [0, 0, 0, 255], secondary: [255, 255, 255, 255], activeSlot: 'primary',
-    brushSize: 1, pressure: false, brushShape: 'square', pixelPerfect: false, dither: '', shadeInk: '', paletteLock: false, fillContiguous: true, shapeFilled: false,
+    brushSize: 1, pressure: false, pressureMin: 0, brushShape: 'square', pixelPerfect: false, dither: '', shadeInk: '', paletteLock: false, fillContiguous: true, shapeFilled: false,
     symX: false, symY: false, longPressMs: 600, sampleLayer: false,
     zoom: 8, panX: 0, panY: 0, showGrid: true, tilePreview: false,
     customGrid: { on: false, w: 8, h: 8, color: '#5b8cff' },
