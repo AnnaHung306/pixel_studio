@@ -311,6 +311,13 @@ export function hueShift(deg = 30) {
   }, (n) => `已偏移色相 ${deg}°（${n} 個像素）`, '沒有可轉換的像素');
 }
 
+// Lighten/darken all cels by pct percent (iter 38): positive blends toward white, negative toward black.
+export function adjustBrightness(pct = 15) {
+  const t = Math.max(-100, Math.min(100, pct)) / 100;
+  const f = (v) => Math.max(0, Math.min(255, Math.round(t >= 0 ? v + (255 - v) * t : v * (1 + t))));
+  return mapColors(t >= 0 ? '變亮' : '變暗', (r, g, b) => [f(r), f(g), f(b)], (n) => `已${t >= 0 ? '變亮' : '變暗'} ${Math.abs(pct)}%（${n} 個像素）`, '沒有可調整的像素');
+}
+
 // Add a 1px outline around opaque pixels of the active cel (iter 35; options iter 36).
 // mode: 'outer' (default, transparent pixels next to art) | 'inner' (opaque edge pixels become outline). diag: 8-neighbour.
 export function addOutline(opts = {}) {

@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1632,6 +1632,21 @@ async function runProfile(name, target, base) {
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent pixels stay transparent');
     await E(() => window.__pixelStudio.undo());
     ok(await E(() => window.__e2e.cel(4, 3)[0]) === 10, 'undo restores colour');
+  };
+  S.brightness = async () => {
+    await newProject(16, 16, 'br');
+    await setPrimary([100, 200, 0, 255]);
+    await E(() => window.__e2e.stroke([[3, 3], [6, 3]], 'pen'));
+    await menu('變亮 15%');
+    const l = await E(() => window.__e2e.cel(4, 3));
+    ok(l[0] === 123 && l[1] === 208 && l[2] === 38 && l[3] === 255, 'lighten 15% blends toward white', JSON.stringify(l));
+    await E(() => window.__pixelStudio.undo());
+    await menu('變暗 15%');
+    const d = await E(() => window.__e2e.cel(4, 3));
+    ok(d[0] === 85 && d[1] === 170 && d[2] === 0 && d[3] === 255, 'darken 15% scales toward black', JSON.stringify(d));
+    ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent stays transparent');
+    await E(() => window.__pixelStudio.undo());
+    ok(await E(() => window.__e2e.cel(4, 3)[0]) === 100, 'undo restores colour');
   };
   S.custombrush = async () => {
     await newProject(16, 16, 'cb');
