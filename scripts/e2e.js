@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1659,6 +1659,19 @@ async function runProfile(name, target, base) {
     await menu('降低對比 20%');
     const d = await E(() => window.__e2e.cel(4, 3));
     ok(d[0] === 186 && d[1] === 106 && d[2] === 26, 'contrast -20% pulls toward gray', JSON.stringify(d));
+    ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent stays transparent');
+  };
+  S.saturation = async () => {
+    await newProject(16, 16, 'sa');
+    await setPrimary([200, 100, 0, 255]);
+    await E(() => window.__e2e.stroke([[3, 3], [6, 3]], 'pen'));
+    await menu('增加飽和度 20%');
+    const l = await E(() => window.__e2e.cel(4, 3));
+    ok(l[0] === 216 && l[1] === 96 && l[2] === 0 && l[3] === 255, 'saturation +20%', JSON.stringify(l));
+    await E(() => window.__pixelStudio.undo());
+    await menu('降低飽和度 20%');
+    const d = await E(() => window.__e2e.cel(4, 3));
+    ok(d[0] === 184 && d[1] === 104 && d[2] === 24, 'saturation -20%', JSON.stringify(d));
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent stays transparent');
   };
   S.custombrush = async () => {

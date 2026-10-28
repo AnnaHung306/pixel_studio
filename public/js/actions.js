@@ -319,6 +319,14 @@ export function adjustContrast(pct = 20) {
   return mapColors(nm, (r, g, b) => [f(r), f(g), f(b)], (n) => `已${nm} ${Math.abs(pct)}%（${n} 個像素）`, '沒有可調整的像素');
 }
 
+// Raise/lower saturation by pct percent (iter 40): scales each channel's distance from Rec.601 luma.
+export function adjustSaturation(pct = 20) {
+  const k = 1 + Math.max(-100, Math.min(100, pct)) / 100;
+  const cl = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  const nm = pct >= 0 ? '增加飽和度' : '降低飽和度';
+  return mapColors(nm, (r, g, b) => { const y = 0.299 * r + 0.587 * g + 0.114 * b; return [cl(y + (r - y) * k), cl(y + (g - y) * k), cl(y + (b - y) * k)]; }, (n) => `已${nm} ${Math.abs(pct)}%（${n} 個像素）`, '沒有可調整的像素');
+}
+
 // Lighten/darken all cels by pct percent (iter 38): positive blends toward white, negative toward black.
 export function adjustBrightness(pct = 15) {
   const t = Math.max(-100, Math.min(100, pct)) / 100;
