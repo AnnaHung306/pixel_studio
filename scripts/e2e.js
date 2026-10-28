@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1673,6 +1673,26 @@ async function runProfile(name, target, base) {
     const d = await E(() => window.__e2e.cel(4, 3));
     ok(d[0] === 184 && d[1] === 104 && d[2] === 24, 'saturation -20%', JSON.stringify(d));
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent stays transparent');
+  };
+  S.pvmark = async () => {
+    await newProject(16, 16, 'pv');
+    const r = await E(() => {
+      const got = []; document.addEventListener('ps-hover', (e) => got.push(e.detail));
+      const c = document.getElementById('canvas') || document.querySelector('#stage canvas') || document.querySelector('canvas');
+      const b = c.getBoundingClientRect();
+      c.dispatchEvent(new PointerEvent('pointermove', { pointerType: 'mouse', clientX: b.left + b.width / 2, clientY: b.top + b.height / 2, bubbles: true }));
+      c.dispatchEvent(new PointerEvent('pointerleave', { bubbles: false }));
+      return got;
+    });
+    ok(r.length === 2 && r[0] && r[0].x >= 0 && r[1] === null, 'hover event carries doc pixel then clears on leave', JSON.stringify(r));
+    const m = await E(async () => {
+      document.dispatchEvent(new CustomEvent('ps-hover', { detail: { x: 3, y: 4 } }));
+      await new Promise((r) => setTimeout(r, 150));
+      const pv = document.getElementById('preview');
+      return { vis: !!pv.offsetParent, mark: pv.dataset.mark || null };
+    });
+    ok(!m.vis || m.mark === '3,4', 'preview marks hovered pixel when visible', JSON.stringify(m));
+    await E(() => document.dispatchEvent(new CustomEvent('ps-hover', { detail: null })));
   };
   S.custombrush = async () => {
     await newProject(16, 16, 'cb');

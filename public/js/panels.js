@@ -500,7 +500,10 @@ export function renderHistory() {
 }
 
 // ---------- preview ----------
+let pvSrc = null, pvMark = null;
+document.addEventListener('ps-hover', (e) => { pvMark = e.detail; if (pvSrc) renderPreview(pvSrc); });
 export function renderPreview(src) {
+  pvSrc = src;
   const pv = document.getElementById('preview');
   if (!pv.offsetParent) return;
   const r = pv.getBoundingClientRect();
@@ -512,5 +515,15 @@ export function renderPreview(src) {
   const fit = Math.min(pv.width / src.width, pv.height / src.height);
   const s = fit >= 1 ? Math.floor(fit) : fit;
   const w = src.width * s, hh = src.height * s;
-  g.drawImage(src, (pv.width - w) / 2, (pv.height - hh) / 2, w, hh);
+  const ox = (pv.width - w) / 2, oy = (pv.height - hh) / 2;
+  g.drawImage(src, ox, oy, w, hh);
+  // B42: mark the pixel under the cursor so the preview shows where you are drawing
+  if (pvMark && pvMark.x >= 0 && pvMark.y >= 0 && pvMark.x < src.width && pvMark.y < src.height) {
+    const mx = ox + pvMark.x * s, my = oy + pvMark.y * s, m = Math.max(s, 3 * dpr);
+    const cx = mx + s / 2 - m / 2, cy = my + s / 2 - m / 2;
+    g.lineWidth = Math.max(1, dpr);
+    g.strokeStyle = '#000'; g.strokeRect(cx - 1, cy - 1, m + 2, m + 2);
+    g.strokeStyle = '#fff'; g.strokeRect(cx, cy, m, m);
+    pv.dataset.mark = `${pvMark.x},${pvMark.y}`;
+  } else delete pv.dataset.mark;
 }

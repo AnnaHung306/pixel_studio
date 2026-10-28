@@ -265,7 +265,7 @@ function bindInput() {
   canvas.addEventListener('pointermove', onMove);
   canvas.addEventListener('pointerup', onUp);
   canvas.addEventListener('pointercancel', onCancel);
-  canvas.addEventListener('pointerleave', () => { hover = null; needsRender = true; document.getElementById('coords').textContent = ''; });
+  canvas.addEventListener('pointerleave', () => { hover = null; needsRender = true; document.getElementById('coords').textContent = ''; document.dispatchEvent(new CustomEvent('ps-hover', { detail: null })); });
   canvas.addEventListener('wheel', onWheel, { passive: false });
   // Safari: block the page-level pinch zoom / gesture events everywhere (iOS ignores user-scalable=no)
   for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEventListener(ev, (e) => e.preventDefault(), { passive: false });
@@ -330,6 +330,7 @@ function onMove(e) {
     const x = Math.floor(d.x), y = Math.floor(d.y);
     document.getElementById('coords').textContent = x >= 0 && y >= 0 && x < W() && y < H() ? `${x}, ${y}` : '';
     needsRender = true;
+    document.dispatchEvent(new CustomEvent('ps-hover', { detail: x >= 0 && y >= 0 && x < W() && y < H() ? { x, y } : null }));
   }
   const ptr = pointers.get(e.pointerId);
   if (!ptr) return;
