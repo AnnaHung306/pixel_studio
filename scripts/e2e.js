@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1631,6 +1631,22 @@ async function runProfile(name, target, base) {
     await stroke([[3, 3], [6, 3]], 'pen');
     ok(await E(() => window.__e2e.cel(4, 3)[3]) === 255, 'alpha lock blocks eraser');
     await E(() => window.__pixelStudio.setUI({ tool: 'pencil' }));
+  };
+  S.gradfill = async () => {
+    await newProject(16, 16, 'grad');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'fill', fillGradient: true, fillContiguous: true, paletteLock: false, primary: [255, 0, 0, 255], secondary: [0, 0, 255, 255] }));
+    await stroke([[0, 8], [15, 8]], 'pen');
+    const row = await E(() => { const r = []; for (let x = 0; x < 16; x++) r.push(window.__e2e.cel(x, 8)); return r; });
+    ok(row[0][0] === 255 && row[0][2] === 0, 'gradient starts with primary');
+    ok(row[15][2] === 255 && row[15][0] === 0, 'gradient ends with secondary');
+    ok(row.every((c) => c[3] === 255 && ((c[0] === 255 && c[2] === 0) || (c[0] === 0 && c[2] === 255))), 'gradient only uses the two colours (dithered)');
+    ok(await E(() => window.__e2e.cel(7, 3)[3]) === 255, 'gradient fills whole region');
+    await E(() => document.getElementById('btn-undo').click());
+    await E(() => window.__pixelStudio.setUI({ primary: [0, 255, 0, 255] }));
+    await stroke([[4, 4]], 'pen');
+    const c = await E(() => window.__e2e.cel(10, 10));
+    ok(c[1] === 255 && c[0] === 0, 'tap without drag = flat primary fill', JSON.stringify(c));
+    await E(() => window.__pixelStudio.setUI({ fillGradient: false, tool: 'pencil' }));
   };
   S.palettelock = async () => {
     await newProject(16, 16, 'plock');

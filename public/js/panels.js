@@ -88,6 +88,7 @@ export function renderOptions() {
     add(h('span', { class: 'grp' },
       h('button', { class: 'tb' + (app.ui.fillContiguous ? ' on' : ''), onclick: () => setUI({ fillContiguous: true }) }, '相連區域'),
       h('button', { class: 'tb' + (!app.ui.fillContiguous ? ' on' : ''), onclick: () => setUI({ fillContiguous: false }) }, '全部同色')));
+    add(tog('🌗 漸層', 'fillGradient', '拖曳決定方向：主色 → 副色的抖動漸層（點一下＝單色填滿）'));
     add(h('span', { class: 'small' }, '有選取範圍時只填選取內'));
   } else if (t === 'eyedropper') {
     add(h('span', { class: 'grp' },

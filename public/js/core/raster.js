@@ -142,6 +142,45 @@ export function floodFill(buf, w, h, x, y, color, contiguous = true, mask = null
   return count;
 }
 
+// Region that a flood fill would cover, as an array of pixel indices.
+export function fillRegion(buf, w, h, x, y, contiguous = true, mask = null, tol = 0) {
+  x |= 0; y |= 0;
+  const out = [];
+  if (x < 0 || y < 0 || x >= w || y >= h) return out;
+  if (mask && !mask[y * w + x]) return out;
+  const target = getPixel(buf, w, h, x, y);
+  const ok = (p) => (!mask || mask[p]) && sameColor(buf, p * 4, target, tol);
+  if (!contiguous) { for (let p = 0; p < w * h; p++) if (ok(p)) out.push(p); return out; }
+  const seen = new Uint8Array(w * h);
+  const stack = [y * w + x];
+  while (stack.length) {
+    const p = stack.pop();
+    if (seen[p]) continue;
+    seen[p] = 1;
+    if (!ok(p)) continue;
+    out.push(p);
+    const px = p % w, py = (p - px) / w;
+    if (px > 0) stack.push(p - 1);
+    if (px < w - 1) stack.push(p + 1);
+    if (py > 0) stack.push(p - w);
+    if (py < h - 1) stack.push(p + w);
+  }
+  return out;
+}
+
+// Ordered-dither gradient between c1 (at x0,y0) and c2 (at x1,y1) over `region` (pixel indices). Mutates buf.
+export function gradientApply(buf, w, region, c1, c2, x0, y0, x1, y1) {
+  const dx = x1 - x0, dy = y1 - y0, len2 = dx * dx + dy * dy;
+  for (const p of region) {
+    const px = p % w, py = (p - px) / w;
+    let t = len2 ? ((px - x0) * dx + (py - y0) * dy) / len2 : 0;
+    t = Math.min(1, Math.max(0, t));
+    const hit = (BAYER4[(py & 3) * 4 + (px & 3)] + 0.5) / 16 < t;
+    buf.set(hit ? c2 : c1, p * 4);
+  }
+  return region.length;
+}
+
 export function isEmpty(buf) {
   if (!buf) return true;
   for (let i = 3; i < buf.length; i += 4) if (buf[i] !== 0) return false;

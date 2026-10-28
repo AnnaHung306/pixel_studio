@@ -6,6 +6,25 @@
 
 <!-- latest -->
 
+## v1.39.0（2026-10-29，迭代 48）
+
+smoke 54/54；e2e 18 組 7943 項通過、0 失敗；單元測試 smoke 54/54 與 npm test（46）通過。
+
+| 裝置設定 | 引擎 | 伺服器 | 純靜態 dist/ |
+|---|---|---|---|
+| iPad Pro 11 橫向 | webkit 27.2 | 447 ✅ | 428 ✅ |
+| iPad Pro 11 直向 | webkit 27.2 | 447 ✅ | 428 ✅ |
+| iPad（第 7 代）橫向 | webkit 27.2 | 447 ✅ | 428 ✅ |
+| iPad（第 7 代）直向 | webkit 27.2 | 447 ✅ | 428 ✅ |
+| iPad mini 橫向 | webkit 27.2 | 447 ✅ | 428 ✅ |
+| iPad mini 直向 | webkit 27.2 | 447 ✅ | 428 ✅ |
+| iPhone 14 直向 | webkit 27.2 | 463 ✅ | 444 ✅ |
+| iPhone 14 橫向 | webkit 27.2 | 463 ✅ | 444 ✅ |
+| 桌面 1920×1080 | chromium 156.0.8078.4 | 449 ✅ | 430 ✅ |
+
+新增 gradfill e2e 組、gradient.test.js。
+
+
 ## v1.38.0（2026-10-29，迭代 47）
 
 smoke 54/54；e2e 18 組 7835 項通過、0 失敗；單元測試 smoke 54/54 與 npm test 通過。

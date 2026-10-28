@@ -1,7 +1,7 @@
 // Interactive drawing tools, selection and floating-selection logic.
 import { app, emit, commit, activeLayer, activeKey, activeFrame, W, H, setUI, toast, getCelBuf } from './state.js';
 import {
-  createBuffer, setPixel, getPixel, linePoints, rectPoints, ellipsePoints, floodFill, ditherHit, polygonMask,
+  createBuffer, setPixel, getPixel, linePoints, rectPoints, ellipsePoints, floodFill, fillRegion, gradientApply, ditherHit, polygonMask,
   pasteOver, flipBuffer, rotateBuffer, reframe, wrapShift, isEmpty, compositeLayers, rgbaToHex, celKey, b64ToBytes,
 } from './core/raster.js';
 import { shadeStep, nearestPaletteColor } from './core/palettes.js';
@@ -158,6 +158,16 @@ export function down(pt, info) {
     case 'fill': {
       if (!editable()) return;
       const key = activeKey();
+      if (app.ui.fillGradient) {
+        const orig = app.doc.cels.get(key) || createBuffer(W(), H());
+        const region = fillRegion(orig, W(), H(), x, y, app.ui.fillContiguous, app.selection?.mask || null);
+        if (!region.length) break;
+        const c2 = app.ui.paletteLock && app.ui.secondary[3] > 0 ? nearestPaletteColor(app.ui.secondary, app.doc.meta.palette) : app.ui.secondary;
+        stroke = { tool: 'gradfill', key, orig, region, c1: color, c2, start: [x, y], moved: false };
+        const b = orig.slice(); gradientApply(b, W(), region, color, color, x, y, x, y);
+        stroke.buf = b; app.overrides.set(key, b); emit('canvas');
+        break;
+      }
       const buf = (app.doc.cels.get(key) || createBuffer(W(), H())).slice();
       const n = floodFill(buf, W(), H(), x, y, color, app.ui.fillContiguous, app.selection?.mask || null);
       if (n) commit('油漆桶', () => setCel(key, buf));
@@ -215,6 +225,14 @@ export function move(pt, info) {
   const x = Math.floor(pt.x), y = Math.floor(pt.y);
   const st = stroke;
   switch (st.tool) {
+    case 'gradfill': {
+      if (x === st.start[0] && y === st.start[1] && !st.moved) return;
+      st.moved = true;
+      st.buf = st.orig.slice();
+      gradientApply(st.buf, W(), st.region, st.c1, st.c2, st.start[0], st.start[1], x, y);
+      app.overrides.set(st.key, st.buf); emit('canvas');
+      return;
+    }
     case 'pencil': case 'eraser': {
       pressureSize(st, info);
       const last = st.path[st.path.length - 1];
@@ -278,6 +296,10 @@ export function up(pt, info) {
   stroke = null;
   if (app.__oneShotUsed) { app.__oneShotUsed = false; setUI({ oneShot: null }); }
   switch (st.tool) {
+    case 'gradfill':
+      app.overrides.delete(st.key);
+      commit(st.moved ? '漸層填充' : '油漆桶', () => setCel(st.key, st.buf));
+      break;
     case 'pencil': case 'eraser': case 'line': case 'rect': case 'ellipse': {
       const label = { pencil: '鉛筆', eraser: '橡皮擦', line: '直線', rect: '矩形', ellipse: '橢圓' }[st.tool];
       app.overrides.delete(st.key);
