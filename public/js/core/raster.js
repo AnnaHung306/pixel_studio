@@ -169,13 +169,13 @@ export function fillRegion(buf, w, h, x, y, contiguous = true, mask = null, tol 
 }
 
 // Ordered-dither gradient between c1 (at x0,y0) and c2 (at x1,y1) over `region` (pixel indices). Mutates buf.
-export function gradientApply(buf, w, region, c1, c2, x0, y0, x1, y1, radial = false) {
+export function gradientApply(buf, w, region, c1, c2, x0, y0, x1, y1, radial = false, hard = false) {
   const dx = x1 - x0, dy = y1 - y0, len2 = dx * dx + dy * dy;
   for (const p of region) {
     const px = p % w, py = (p - px) / w;
     let t = len2 ? (radial ? Math.sqrt(((px - x0) ** 2 + (py - y0) ** 2) / len2) : ((px - x0) * dx + (py - y0) * dy) / len2) : 0;
     t = Math.min(1, Math.max(0, t));
-    const hit = (BAYER4[(py & 3) * 4 + (px & 3)] + 0.5) / 16 < t;
+    const hit = hard ? t >= 0.5 : (BAYER4[(py & 3) * 4 + (px & 3)] + 0.5) / 16 < t;
     buf.set(hit ? c2 : c1, p * 4);
   }
   return region.length;

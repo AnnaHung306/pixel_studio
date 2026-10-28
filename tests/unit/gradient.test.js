@@ -30,3 +30,10 @@ test('gradientApply radial: centre is c1, beyond radius is c2', () => {
   assert.deepEqual(Array.from(b.slice(0, 4)), [0, 0, 255, 255]);
   assert.deepEqual(Array.from(b.slice((10 * w + 20) * 4, (10 * w + 20) * 4 + 4)), [0, 0, 255, 255]);
 });
+
+test('gradientApply hard: no dither, splits at midpoint', () => {
+  const w = 10, b = R.createBuffer(w, 4);
+  const region = R.fillRegion(b, w, 4, 0, 0);
+  R.gradientApply(b, w, region, [255, 0, 0, 255], [0, 0, 255, 255], 0, 0, 9, 0, false, true);
+  for (let y = 0; y < 4; y++) for (let x = 0; x < w; x++) assert.equal(b[(y * w + x) * 4 + 2] === 255, x / 9 >= 0.5);
+});

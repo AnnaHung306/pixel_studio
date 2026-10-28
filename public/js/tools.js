@@ -229,7 +229,7 @@ export function move(pt, info) {
       if (x === st.start[0] && y === st.start[1] && !st.moved) return;
       st.moved = true;
       st.buf = st.orig.slice();
-      gradientApply(st.buf, W(), st.region, st.c1, st.c2, st.start[0], st.start[1], x, y, !!app.ui.gradRadial);
+      gradientApply(st.buf, W(), st.region, st.c1, st.c2, st.start[0], st.start[1], x, y, !!app.ui.gradRadial, !!app.ui.gradHard);
       app.overrides.set(st.key, st.buf); emit('canvas');
       return;
     }
