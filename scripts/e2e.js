@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1664,6 +1664,18 @@ async function runProfile(name, target, base) {
     await page.waitForFunction(() => !document.querySelector('#palette .pal').title.includes('Test Name'), null, { timeout: 4000 }).catch(() => {});
     const t3 = await E(() => document.querySelector('#palette .pal').title);
     ok(!t3.includes('Test Name'), 'undo removes the name', t3);
+  };
+  S.palsort = async () => {
+    await newProject(16, 16, 'psort');
+    await openSheet('color');
+    await tap(page.locator('#palette-actions button[title="調色盤選單"]'));
+    await tapText('#menu .mi', '依亮度排序調色盤'); await settle();
+    const lum = (h) => 0.299 * parseInt(h.slice(1, 3), 16) + 0.587 * parseInt(h.slice(3, 5), 16) + 0.114 * parseInt(h.slice(5, 7), 16);
+    const pal = await E(() => window.__pixelStudio.app.doc.meta.palette.slice());
+    ok(pal.length > 1 && pal.every((h, i) => i === 0 || lum(h) >= lum(pal[i - 1]) - 1e-9), 'palette sorted dark to light');
+    await E(() => window.__pixelStudio.undo());
+    const back = await E(() => window.__pixelStudio.app.doc.meta.palette.slice());
+    ok(back.length === pal.length && back.join() !== pal.join(), 'undo restores previous order');
   };
   S.palettelock = async () => {
     await newProject(16, 16, 'plock');

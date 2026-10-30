@@ -110,3 +110,16 @@ export function nearestPaletteColor(rgba, palette) {
   }
   return best ? [...best, rgba[3]] : rgba.slice();
 }
+
+// 調色盤排序（B54）：依亮度或色相；穩定排序，灰階（無色相）排在色相之前
+export function sortPalette(list, mode = 'lum') {
+  const info = list.map((h, i) => {
+    const r = parseInt(h.slice(1, 3), 16), g = parseInt(h.slice(3, 5), 16), b = parseInt(h.slice(5, 7), 16);
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+    let hue = -1;
+    if (d > 8) hue = mx === r ? (((g - b) / d) % 6 + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    return { h, i, lum: 0.299 * r + 0.587 * g + 0.114 * b, hue };
+  });
+  info.sort((a, b) => (mode === 'hue' ? (a.hue - b.hue) || (a.lum - b.lum) : (a.lum - b.lum)) || a.i - b.i);
+  return info.map((x) => x.h);
+}
