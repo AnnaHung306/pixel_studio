@@ -36,16 +36,29 @@ export function parsePaletteFile(text, filename = '') {
   return colors;
 }
 
+// Names (B51): GPL lines "r g b<TAB>name". Returns {hex:name}; auto "#rrggbb"-style labels are skipped.
+export function parsePaletteNames(text) {
+  const names = {};
+  for (const line of text.split(/\r?\n/)) {
+    const m = line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+(.+)$/);
+    if (!m) continue;
+    const nm = m[4].trim();
+    if (!nm || /^#?[0-9a-fA-F]{6}$/.test(nm) || /^Untitled$/i.test(nm)) continue;
+    names['#' + [m[1], m[2], m[3]].map((v) => (+v).toString(16).padStart(2, '0')).join('') + 'ff'] = nm.slice(0, 40);
+  }
+  return names;
+}
+
 export function paletteToHex(colors) {
   return colors.map((c) => c.replace('#', '').slice(0, 6)).join('\n') + '\n';
 }
 
-export function paletteToGpl(colors, name = 'Pixel Studio') {
+export function paletteToGpl(colors, name = 'Pixel Studio', names = {}) {
   const lines = ['GIMP Palette', `Name: ${name}`, 'Columns: 8', '#'];
   for (const c of colors) {
     const h = c.replace('#', '');
     const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
-    lines.push(`${String(r).padStart(3)} ${String(g).padStart(3)} ${String(b).padStart(3)}\t${h.slice(0, 6)}`);
+    lines.push(`${String(r).padStart(3)} ${String(g).padStart(3)} ${String(b).padStart(3)}\t${(names && names[c]) || h.slice(0, 6)}`);
   }
   return lines.join('\n') + '\n';
 }

@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1648,6 +1648,22 @@ async function runProfile(name, target, base) {
     const c = await E(() => window.__e2e.cel(10, 10));
     ok(c[1] === 255 && c[0] === 0, 'tap without drag = flat primary fill', JSON.stringify(c));
     await E(() => window.__pixelStudio.setUI({ fillGradient: false, tool: 'pencil' }));
+  };
+  S.palname = async () => {
+    await newProject(16, 16, 'pname');
+    const hex = await E(() => window.__pixelStudio.app.doc.meta.palette[0]);
+    const sw = await E(() => document.querySelector('#palette .pal').title);
+    ok(sw.length > 0 && !/ /.test(sw), 'unnamed swatch title is hex only', sw);
+    await E(() => document.querySelector('#palette .pal').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true })));
+    await tapText('#menu .mi', '命名顏色…');
+    await E(() => { const i = document.querySelector('.modal input'); i.value = 'Test Name'; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); });
+    await page.waitForFunction(() => document.querySelector('#palette .pal').title.startsWith('Test Name'), null, { timeout: 4000 }).catch(() => {});
+    const t2 = await E(() => document.querySelector('#palette .pal').title);
+    ok(t2.startsWith('Test Name '), 'swatch title shows the name', t2);
+    await E(() => document.getElementById('btn-undo').click());
+    await page.waitForFunction(() => !document.querySelector('#palette .pal').title.includes('Test Name'), null, { timeout: 4000 }).catch(() => {});
+    const t3 = await E(() => document.querySelector('#palette .pal').title);
+    ok(!t3.includes('Test Name'), 'undo removes the name', t3);
   };
   S.palettelock = async () => {
     await newProject(16, 16, 'plock');

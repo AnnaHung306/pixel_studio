@@ -204,6 +204,15 @@ export function addPaletteColor(c) {
 export function removePaletteColor(hex) {
   setPalette(app.doc.meta.palette.filter((c) => c !== hex), '移除顏色');
 }
+// B51: names live in meta.paletteNames {hex: name}; empty name clears.
+export function namePaletteColor(hex, name) {
+  const nm = String(name || '').trim().slice(0, 40);
+  commit(nm ? '命名顏色' : '清除顏色名稱', () => {
+    const m = app.doc.meta;
+    m.paletteNames = { ...(m.paletteNames || {}) };
+    if (nm) m.paletteNames[hex] = nm; else delete m.paletteNames[hex];
+  });
+}
 
 export function renameProject(name) {
   commit('重新命名', () => { app.doc.meta.name = name; });

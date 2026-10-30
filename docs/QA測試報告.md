@@ -6,6 +6,25 @@
 
 <!-- latest -->
 
+## v1.43.0（2026-10-30，迭代 52）
+
+smoke 54/54；e2e 18 組 8015 項通過、0 失敗；單元測試 smoke 54/54 與 npm test（51）通過。
+
+| 裝置設定 | 引擎 | 伺服器 | 純靜態 dist/ |
+|---|---|---|---|
+| iPad Pro 11 橫向 | webkit 27.2 | 451 ✅ | 432 ✅ |
+| iPad Pro 11 直向 | webkit 27.2 | 451 ✅ | 432 ✅ |
+| iPad（第 7 代）橫向 | webkit 27.2 | 451 ✅ | 432 ✅ |
+| iPad（第 7 代）直向 | webkit 27.2 | 451 ✅ | 432 ✅ |
+| iPad mini 橫向 | webkit 27.2 | 451 ✅ | 432 ✅ |
+| iPad mini 直向 | webkit 27.2 | 451 ✅ | 432 ✅ |
+| iPhone 14 直向 | webkit 27.2 | 467 ✅ | 448 ✅ |
+| iPhone 14 橫向 | webkit 27.2 | 467 ✅ | 448 ✅ |
+| 桌面 1920×1080 | chromium 156.0.8078.4 | 453 ✅ | 434 ✅ |
+
+palnames.test.js；e2e 組 palname。
+
+
 ## v1.42.0（2026-10-30，迭代 51）
 
 smoke 54/54；e2e 18 組 7943 項通過、0 失敗；單元測試 smoke 54/54 與 npm test（49）通過。

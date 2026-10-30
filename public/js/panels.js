@@ -4,7 +4,7 @@ import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confir
 import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, customBrushFromSelection, dropFloating, cancelFloating } from './tools.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
-import { PALETTES, parsePaletteFile, paletteToHex, paletteToGpl, makeRamp, shadeStep } from './core/palettes.js';
+import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep } from './core/palettes.js';
 import { fitView } from './view.js';
 
 // ---------- pixel icons ----------
@@ -218,7 +218,8 @@ export function renderPalette() {
   const p = rgbaToHex(app.ui.primary), s = rgbaToHex(app.ui.secondary);
   pal.forEach((hex) => {
     const c = hexToRgba(hex);
-    const el = h('div', { class: 'pal checker' + (hex === p ? ' sel' : '') + (hex === s ? ' sel2' : ''), title: hex, role: 'button', 'aria-label': `調色盤顏色 ${hex}` }, h('span', { class: 'swatch-fill', style: { background: colorBg(c) } }));
+    const cname = (app.doc.meta.paletteNames || {})[hex];
+    const el = h('div', { class: 'pal checker' + (hex === p ? ' sel' : '') + (hex === s ? ' sel2' : ''), title: cname ? `${cname} ${hex}` : hex, role: 'button', 'aria-label': `調色盤顏色 ${cname ? cname + ' ' : ''}${hex}` }, h('span', { class: 'swatch-fill', style: { background: colorBg(c) } }));
     let lp = null;
     el.addEventListener('pointerdown', (e) => {
       if (e.button === 2) return;
@@ -242,6 +243,7 @@ function swatchMenu(el, hex) {
     { label: '設為主要顏色', action: () => setUI({ primary: hexToRgba(hex) }) },
     { label: '設為次要顏色', action: () => setUI({ secondary: hexToRgba(hex) }) },
     { label: '以目前顏色取代', action: () => A.setPalette(app.doc.meta.palette.map((c) => (c === hex ? rgbaToHex(curColor()) : c)), '修改顏色') },
+    { label: '命名顏色…', action: async () => { const v = await prompt('顏色名稱', (app.doc.meta.paletteNames || {})[hex] || '', hex); if (v !== null && v !== undefined) A.namePaletteColor(hex, v); } },
     { label: '從調色盤移除', action: () => A.removePaletteColor(hex) },
   ]);
 }
@@ -254,7 +256,7 @@ function paletteMenu(anchor) {
     { label: '從畫面擷取所有顏色', action: extractPalette },
     { label: '匯入 .hex / .gpl…', action: importPalette },
     { label: '匯出 .hex', action: () => download(new Blob([paletteToHex(app.doc.meta.palette)], { type: 'text/plain' }), `${app.doc.meta.name}.hex`) },
-    { label: '匯出 .gpl（GIMP / Aseprite）', action: () => download(new Blob([paletteToGpl(app.doc.meta.palette, app.doc.meta.name)], { type: 'text/plain' }), `${app.doc.meta.name}.gpl`) },
+    { label: '匯出 .gpl（GIMP / Aseprite）', action: () => download(new Blob([paletteToGpl(app.doc.meta.palette, app.doc.meta.name, app.doc.meta.paletteNames)], { type: 'text/plain' }), `${app.doc.meta.name}.gpl`) },
     { label: '清空調色盤', action: () => A.setPalette([], '清空調色盤') },
   ]);
 }
@@ -263,7 +265,8 @@ async function importPalette() {
   if (!f) return;
   const cols = parsePaletteFile(await readAs(f), f.name);
   if (!cols.length) return toast('檔案中找不到顏色');
-  A.setPalette(cols, '匯入調色盤');
+  const nm = parsePaletteNames(await readAs(f));
+  commit('匯入調色盤', () => { app.doc.meta.palette = cols; app.doc.meta.paletteNames = nm; });
   toast(`已匯入 ${cols.length} 色`);
 }
 function addRamp() {
