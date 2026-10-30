@@ -54,3 +54,12 @@ test('pixelfont: outline and shadow effects (B63)', async () => {
   assert.ok(cnt(sh, 9) > 0 && cnt(sh, 9) <= cnt(base));
   const o2 = renderText('I', { scale: 2, effect: 'outline' }); assert.equal(o2.w, base.w * 2 + 4);
 });
+test('pixelfont: vertical text stacks glyphs, columns right→left (B67)', async () => {
+  await ensureText('中文\nA', 'fusion12m', 'zh_tw');
+  const v = renderText('中文\nA', { vertical: true, lineGap: 2 });
+  assert.equal(v.w, 12 * 2 + 2); assert.equal(v.h, 24);
+  const colOn = (r, x0, x1) => { let n = 0; for (let y = 0; y < r.h; y++) for (let x = x0; x < x1; x++) if (r.buf[(y * r.w + x) * 4 + 3]) n++; return n; };
+  assert.ok(colOn(v, 14, 26) > 20, 'first line is the right column');
+  assert.ok(colOn(v, 0, 12) > 0 && colOn(v, 0, 12) < colOn(v, 14, 26), 'second line (A) is the left column');
+  assert.equal(renderText('', { vertical: true }), null);
+});

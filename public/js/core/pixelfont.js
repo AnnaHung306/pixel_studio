@@ -65,8 +65,8 @@ export function glyphOf(dir, cp) {
   return { adv, rows, h: pg.h };
 }
 // Render text to an RGBA buffer. Pages must be loaded (await ensureText). Returns null for empty text.
-export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color = [0, 0, 0, 255], scale = 1, spacing = 0, lineGap = 2, align = 'left', effect = 'none', effColor = [0, 0, 0, 255] } = {}) {
-  const r0 = renderTextBase(text, { fontId, lang, color, scale, spacing, lineGap, align });
+export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color = [0, 0, 0, 255], scale = 1, spacing = 0, lineGap = 2, align = 'left', effect = 'none', effColor = [0, 0, 0, 255], vertical = false } = {}) {
+  const r0 = vertical ? renderVertical(text, { fontId, lang, color, scale, spacing, lineGap }) : renderTextBase(text, { fontId, lang, color, scale, spacing, lineGap, align });
   return r0 && effect !== 'none' ? applyTextEffect(r0, effect, effColor, scale) : r0;
 }
 // Outline (1 text-pixel ring, 8-neighbour) or drop shadow (+1,+1). Grows the bitmap by one text-pixel.
@@ -124,6 +124,40 @@ function renderTextBase(text, { fontId, lang, color, scale, spacing, lineGap, al
         }
       }
     }
+  });
+  return { buf, w: W, h: H };
+}
+
+// Vertical (直排): each line becomes a column, glyphs stacked top→bottom, columns run right→left.
+function renderVertical(text, { fontId, lang, color, scale, spacing, lineGap }) {
+  const dir = fontDir(fontId, lang), info = fontInfo(fontId), GH = info.h, SZ = info.size;
+  const cols = String(text).replace(/\r/g, '').split('\n').map((ln) => [...ln]);
+  if (!cols.some((c) => c.length)) return null;
+  const cw = GH + lineGap, nRows = Math.max(...cols.map((c) => c.length));
+  const W = (cols.length * cw - lineGap) * scale, H = (nRows * (GH + spacing) - spacing) * scale;
+  if (W <= 0 || H <= 0) return null;
+  const buf = new Uint8ClampedArray(W * H * 4);
+  cols.forEach((col, ci) => {
+    const colX = (cols.length - 1 - ci) * cw;
+    col.forEach((ch, ri) => {
+      const cp = ch.codePointAt(0);
+      const g = dictGlyph(cp, SZ) || glyphOf(dir, cp) || fallbackGlyph(cp, SZ) || glyphOf(dir, 0xfffd) || { adv: cp < 256 ? GH >> 1 : GH, rows: new Array(GH).fill(0) };
+      const ox = colX + ((GH - g.adv) >> 1);
+      for (let y = 0; y < GH; y++) {
+        const r = g.rows[y] || 0;
+        if (!r) continue;
+        for (let i = 0; i < 16; i++) {
+          if (!(r >> (15 - i) & 1)) continue;
+          const px = (ox + i) * scale, py = (ri * (GH + spacing) + y) * scale;
+          for (let dy = 0; dy < scale; dy++) for (let dx = 0; dx < scale; dx++) {
+            const X = px + dx, Y = py + dy;
+            if (X < 0 || X >= W || Y < 0 || Y >= H) continue;
+            const o = (Y * W + X) * 4;
+            buf[o] = color[0]; buf[o + 1] = color[1]; buf[o + 2] = color[2]; buf[o + 3] = color[3];
+          }
+        }
+      }
+    });
   });
   return { buf, w: W, h: H };
 }

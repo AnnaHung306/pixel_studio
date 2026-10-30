@@ -1916,6 +1916,10 @@ async function runProfile(name, target, base) {
     const dO = await cnt();
     ok(dO[1] === 26 && dO[2] === 28, 'outline effect grows bitmap by 1px each side', JSON.stringify(dO));
     await E(() => window.__pixelStudio.setUI({ textEffect: 'none' })); await type('Hi\n中文'); await settle(400);
+    await E(() => window.__pixelStudio.setUI({ textVertical: 'v' })); await type('Hi\n中文'); await settle(400);
+    const dV = await cnt();
+    ok(dV[1] === 26 && dV[2] === 24, 'vertical text: columns right-to-left (B67)', JSON.stringify(dV));
+    await E(() => window.__pixelStudio.setUI({ textVertical: 'h' })); await type('Hi\n中文'); await settle(400);
     await E(() => { const t = document.getElementById('textInput'); t.focus(); t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true })); });
     await settle(200);
     ok(await E(() => !window.__pixelStudio.app.floating), 'Ctrl+Enter places the text');

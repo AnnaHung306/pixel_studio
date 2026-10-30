@@ -119,6 +119,7 @@ export function renderOptions() {
       sel('textScale', '放大倍率（整數倍，保持像素銳利）', [[1, '×1'], [2, '×2'], [3, '×3'], [4, '×4']], 'textScale', true),
       sel('textSpacing', '字距', [[0, '字距 0'], [1, '字距 1'], [2, '字距 2'], [-1, '字距 -1']], 'textSpacing', true),
       sel('textAlign', '多行對齊', [['left', '靠左'], ['center', '置中'], ['right', '靠右']], 'textAlign'),
+      sel('textVertical', '排列方向：橫排／直排（由右至左）', [['h', '橫排'], ['v', '直排']], 'textVertical'),
       sel('textEffect', '文字效果：外框／陰影使用副色', [['none', '無效果'], ['outline', '外框'], ['shadow', '陰影']], 'textEffect'),
       h('button', { class: 'tb', id: 'textConv', onclick: () => converterDialog(), title: '向量→像素轉換器：把系統字型轉成像素字，可預覽並手修' }, '🔤 轉換器'),
       h('button', { class: 'tb', id: 'textDict', onclick: () => dictionaryDialog(), title: '字形字典：自訂字形，打字時優先使用' }, '📖 字典'),
