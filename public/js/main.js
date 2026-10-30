@@ -545,8 +545,8 @@ async function boot() {
   on('ui', () => {
     clearTimeout(boot.pt);
     boot.pt = setTimeout(() => {
-      const { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, fillGradient, gradRadial, gradHard, shapeFilled, symX, symY, linkMove, wrapMove, dither, shadeInk, longPressMs, tapGestures, paletteLock, customBrush } = app.ui;
-      store.setSetting('uiPrefs', { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, fillGradient, gradRadial, gradHard, shapeFilled, symX, symY, linkMove, wrapMove, dither, shadeInk, longPressMs, tapGestures, paletteLock, customBrush });
+      const { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, fillGradient, gradRadial, gradHard, gradDither, shapeFilled, symX, symY, linkMove, wrapMove, dither, shadeInk, longPressMs, tapGestures, paletteLock, customBrush } = app.ui;
+      store.setSetting('uiPrefs', { primary, secondary, brushSize, pressure, pressureMin, brushShape, pixelPerfect, showGrid, customGrid, onion, refsAbove, penOnly, leftHand, loopMode, tool, fillContiguous, fillGradient, gradRadial, gradHard, gradDither, shapeFilled, symX, symY, linkMove, wrapMove, dither, shadeInk, longPressMs, tapGestures, paletteLock, customBrush });
     }, 500);
   });
   let doc = null;

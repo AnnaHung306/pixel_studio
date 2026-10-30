@@ -1199,6 +1199,7 @@ async function runProfile(name, target, base) {
       ok(await page.locator('#modal-root .modal', { hasText: '加入主畫面' }).count() === 1 && (await page.locator('#modal-root .modal').last().textContent()).includes('以 Web App 開啟'), '“如何加入” shows the iPadOS 26 steps');
       await modalBtn('知道了');
       await tap('#notice-bar [data-act=later]');
+      await page.waitForFunction(() => { const b = document.querySelector('#notice-bar'); return !b || b.offsetParent === null || getComputedStyle(b).display === 'none'; }, null, { timeout: 3000 }).catch(() => {});
       ok(!(await bar.isVisible()), '“稍後” hides the notice');
       await page.reload({ waitUntil: 'load' });
       await page.waitForFunction(() => window.__pixelStudio?.app?.doc, null, { timeout: 15000 });

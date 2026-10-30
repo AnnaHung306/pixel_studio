@@ -169,13 +169,14 @@ export function fillRegion(buf, w, h, x, y, contiguous = true, mask = null, tol 
 }
 
 // Ordered-dither gradient between c1 (at x0,y0) and c2 (at x1,y1) over `region` (pixel indices). Mutates buf.
-export function gradientApply(buf, w, region, c1, c2, x0, y0, x1, y1, radial = false, hard = false) {
+export function gradientApply(buf, w, region, c1, c2, x0, y0, x1, y1, radial = false, hard = false, style = 4) {
+  const M = style === 2 ? BAYER2 : style === 8 ? BAYER8 : BAYER4, N = style === 2 ? 2 : style === 8 ? 8 : 4, NN = N * N;
   const dx = x1 - x0, dy = y1 - y0, len2 = dx * dx + dy * dy;
   for (const p of region) {
     const px = p % w, py = (p - px) / w;
     let t = len2 ? (radial ? Math.sqrt(((px - x0) ** 2 + (py - y0) ** 2) / len2) : ((px - x0) * dx + (py - y0) * dy) / len2) : 0;
     t = Math.min(1, Math.max(0, t));
-    const hit = hard ? t >= 0.5 : (BAYER4[(py & 3) * 4 + (px & 3)] + 0.5) / 16 < t;
+    const hit = hard ? t >= 0.5 : (M[(py % N) * N + (px % N)] + 0.5) / NN < t;
     buf.set(hit ? c2 : c1, p * 4);
   }
   return region.length;
@@ -311,6 +312,8 @@ export function scaleNearest(buf, w, h, s) {
 
 // Ordered dither patterns: returns true when (x,y) should be painted.
 const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+const BAYER2 = [0, 2, 3, 1];
+const BAYER8 = (() => { const o = []; for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) { const b4 = BAYER4[(y & 3) * 4 + (x & 3)]; o.push(b4 * 4 + BAYER2[((y >> 2) & 1) * 2 + ((x >> 2) & 1)]); } return o; })();
 export function ditherHit(pattern, x, y) {
   if (!pattern) return true;
   const t = BAYER4[(y & 3) * 4 + (x & 3)];

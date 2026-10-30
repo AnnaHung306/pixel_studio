@@ -37,3 +37,11 @@ test('gradientApply hard: no dither, splits at midpoint', () => {
   R.gradientApply(b, w, region, [255, 0, 0, 255], [0, 0, 255, 255], 0, 0, 9, 0, false, true);
   for (let y = 0; y < 4; y++) for (let x = 0; x < w; x++) assert.equal(b[(y * w + x) * 4 + 2] === 255, x / 9 >= 0.5);
 });
+
+test('gradientApply dither styles: 2/4/8 all keep ends and differ in pattern', () => {
+  const w = 16, run = (st) => { const b = R.createBuffer(w, 8); const r = R.fillRegion(b, w, 8, 0, 0); R.gradientApply(b, w, r, [255, 0, 0, 255], [0, 0, 255, 255], 0, 0, 15, 0, false, false, st); return b; };
+  const o = [2, 4, 8].map(run);
+  for (const b of o) { assert.equal(b[2], 0); assert.equal(b[15 * 4 + 2], 255); }
+  assert.notDeepEqual(Array.from(o[0]), Array.from(o[2]));
+  assert.deepEqual(Array.from(run(4)), Array.from((() => { const b = R.createBuffer(w, 8); const r = R.fillRegion(b, w, 8, 0, 0); R.gradientApply(b, w, r, [255, 0, 0, 255], [0, 0, 255, 255], 0, 0, 15, 0); return b; })()));
+});

@@ -90,6 +90,7 @@ export function renderOptions() {
       h('button', { class: 'tb' + (!app.ui.fillContiguous ? ' on' : ''), onclick: () => setUI({ fillContiguous: false }) }, '全部同色')));
     add(tog('🌗 漸層', 'fillGradient', '拖曳決定方向：主色 → 副色的抖動漸層（點一下＝單色填滿）'));
     if (app.ui.fillGradient) add(tog('▬ 硬邊', 'gradHard', '硬邊漸層：不抖動，在中點一刀切成兩色'));
+    if (app.ui.fillGradient && !app.ui.gradHard) add(h('label', {}, '網點', (() => { const s = h('select', { id: 'gradDither', onchange: () => setUI({ gradDither: +s.value }), title: '漸層抖動樣式：2×2 粗、4×4 標準、8×8 細緻' }, [[2, '2×2 粗'], [4, '4×4 標準'], [8, '8×8 細']].map(([v, l]) => h('option', { value: v, selected: (+app.ui.gradDither || 4) === v }, l))); return s; })()));
     if (app.ui.fillGradient) add(tog('◎ 放射', 'gradRadial', '放射漸層：起點為圓心，拖曳距離為半徑（主色在中心）'));
     add(h('span', { class: 'small' }, '有選取範圍時只填選取內'));
   } else if (t === 'eyedropper') {
