@@ -5,6 +5,7 @@ import { scaleNearest, createBuffer, reframe, isEmpty, limitScale } from './core
 import { encodeGIF, encodeAPNG, encodePNG, makeZip, decodeGIF, sheetGeometry } from './formats.js';
 import { download, readAs, isIOS } from './dom.js';
 import { docToJSON, docFromJSON } from './storage.js';
+import { dictGlyphsForPxs, importDict } from './core/glyphdict.js';
 import { dropFloating } from './tools.js';
 import { APP_VERSION } from './version.js';
 
@@ -116,7 +117,8 @@ export async function exportAPNG(scale, idxs, loopMode = 'loop') {
 }
 export function exportPxs() {
   dropFloating();
-  download(new Blob([JSON.stringify(docToJSON(app.doc))], { type: 'application/json' }), `${safeName()}.pxs`);
+  const o = docToJSON(app.doc); const gl = dictGlyphsForPxs(); if (gl) o.glyphs = gl; // user glyph dictionary travels with the project (ADR-010)
+  download(new Blob([JSON.stringify(o)], { type: 'application/json' }), `${safeName()}.pxs`);
   import('./notices.js').then((n) => n.markBackup()).catch(() => {});
 }
 
@@ -136,7 +138,9 @@ export async function decodeImageFile(file) {
 }
 
 export async function readPxs(file) {
-  return docFromJSON(JSON.parse(await readAs(file, 'text')));
+  const o = JSON.parse(await readAs(file, 'text'));
+  if (Array.isArray(o.glyphs)) importDict({ app: 'pixel-studio-glyphs', glyphs: o.glyphs }, { keep: true }).catch(() => {}); // merge, never overwrite own glyphs
+  return docFromJSON(o);
 }
 
 export function docFromImage(img, name) {

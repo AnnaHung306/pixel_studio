@@ -30,18 +30,20 @@ export async function saveGlyph({ ch, px, rows, adv, src = 'draw' }) {
 export async function deleteGlyph(px, cp) { dict.delete(k(px, cp)); if (backend) await backend.del(k(px, cp)); }
 export function exportDict() { return JSON.stringify({ app: 'pixel-studio-glyphs', v: 1, glyphs: [...dict.values()].map(({ px, cp, rows, adv, src }) => ({ px, cp, adv, src, rows: rows.map((n) => n.toString(16).padStart(4, '0')).join('') })) }); }
 // Merge; returns number imported. Invalid records are skipped.
-export async function importDict(json) {
+export async function importDict(json, { keep = false } = {}) {
   let o; try { o = typeof json === 'string' ? JSON.parse(json) : json; } catch { throw new Error('不是有效的字典檔'); }
   if (!o || o.app !== 'pixel-studio-glyphs' || !Array.isArray(o.glyphs)) throw new Error('不是 Pixel Studio 字典檔');
   let n = 0;
   for (const g of o.glyphs) {
     if (!g || !Number.isInteger(g.px) || !Number.isInteger(g.cp) || typeof g.rows !== 'string' || g.rows.length !== g.px * 4 || g.px < 4 || g.px > 32 || g.cp < 1 || g.cp > 0x10ffff) continue;
+    if (keep && dict.has(k(g.px, g.cp))) continue;
     const rows = []; for (let i = 0; i < g.px; i++) rows.push(parseInt(g.rows.substr(i * 4, 4), 16));
     if (rows.some(Number.isNaN)) continue;
     await saveGlyph({ ch: String.fromCodePoint(g.cp), px: g.px, rows, adv: g.adv, src: g.src || 'draw' }); n++;
   }
   return n;
 }
+export function dictGlyphsForPxs() { return dict.size ? JSON.parse(exportDict()).glyphs : null; }
 // Crop/pad a 1-bit bitmap (w×h) to px×px (top-left anchored) → rows
 export function bitsToGlyphRows(bits, w, h, px) {
   const rows = [];

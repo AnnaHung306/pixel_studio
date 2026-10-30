@@ -33,3 +33,14 @@ test('glyphdict: list filter, crop and ink width', async () => {
   assert.deepEqual(rows, [0xa000, 0x6000, 0, 0]);
   assert.equal(inkWidth([0xa000]), 3);
 });
+
+test('keep:true merge never overwrites own glyphs; dictGlyphsForPxs round-trips (iter 62)', async () => {
+  const { saveGlyph, importDict, dictGlyphsForPxs, dictGlyph } = await import('../../public/js/core/glyphdict.js');
+  await saveGlyph({ ch: '鑫', px: 12, rows: [0x8000] });
+  const gl = dictGlyphsForPxs();
+  assert.ok(Array.isArray(gl) && gl.length >= 1);
+  const mine = dictGlyph(0x946b, 12).rows[0];
+  const other = gl.map((g) => g.cp === 0x946b && g.px === 12 ? { ...g, rows: 'ffff' + g.rows.slice(4) } : g);
+  assert.equal(await importDict({ app: 'pixel-studio-glyphs', glyphs: other }, { keep: true }), 0);
+  assert.equal(dictGlyph(0x946b, 12).rows[0], mine);
+});
