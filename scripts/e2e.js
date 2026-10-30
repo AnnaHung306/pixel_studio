@@ -1581,6 +1581,7 @@ async function runProfile(name, target, base) {
     const dead = await count();
     await E(() => window.__pixelStudio.undo());
     ok(dead < light || dead <= 3, `pressure threshold keeps light touch small (${dead})`);
+    for (let i = 0; i < 20 && !(await E(() => !!document.querySelector('#pressureMin'))); i++) await new Promise((r) => setTimeout(r, 150));
     ok(await E(() => !!document.querySelector('#pressureMin')), 'threshold selector shown when pressure on');
     await E(() => window.__pixelStudio.setUI({ pressure: false, pressureMin: 0, brushSize: 1 }));
   };

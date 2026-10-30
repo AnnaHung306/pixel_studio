@@ -4,7 +4,7 @@ import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confir
 import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, customBrushFromSelection, dropFloating, cancelFloating } from './tools.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
-import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette } from './core/palettes.js';
+import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette } from './core/palettes.js';
 import { fitView } from './view.js';
 
 // ---------- pixel icons ----------
@@ -255,6 +255,7 @@ function paletteMenu(anchor) {
     { label: '以目前顏色加入色階（7 色，含色相偏移）', action: addRamp },
     { label: '依亮度排序調色盤', action: () => sortPal('lum') },
     { label: '依色相排序調色盤', action: () => sortPal('hue') },
+    { label: '移除重複顏色', action: dedupePal },
     { label: '從畫面擷取所有顏色', action: extractPalette },
     { label: '匯入 .hex / .gpl…', action: importPalette },
     { label: '匯出 .hex', action: () => download(new Blob([paletteToHex(app.doc.meta.palette)], { type: 'text/plain' }), `${app.doc.meta.name}.hex`) },
@@ -277,6 +278,13 @@ function sortPal(mode) {
   if (out.join() === cur.join()) return toast('調色盤已是此順序');
   A.setPalette(out, mode === 'hue' ? '依色相排序' : '依亮度排序');
   toast(mode === 'hue' ? '已依色相排序' : '已依亮度排序');
+}
+function dedupePal() {
+  const cur = app.doc.meta.palette;
+  const out = dedupePalette(cur);
+  if (out.length === cur.length) return toast('調色盤沒有重複顏色');
+  A.setPalette(out, '移除重複顏色');
+  toast(`已移除 ${cur.length - out.length} 個重複顏色`);
 }
 function addRamp() {
   const ramp = makeRamp(rgbaToHex(curColor()).slice(0, 7), 7);

@@ -123,3 +123,9 @@ export function sortPalette(list, mode = 'lum') {
   info.sort((a, b) => (mode === 'hue' ? (a.hue - b.hue) || (a.lum - b.lum) : (a.lum - b.lum)) || a.i - b.i);
   return info.map((x) => x.h);
 }
+
+// 移除調色盤重複顏色（B55）：保留第一次出現，不分大小寫
+export function dedupePalette(list) {
+  const seen = new Set();
+  return list.filter((h) => { const k = h.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+}
