@@ -129,3 +129,6 @@ export function dedupePalette(list) {
   const seen = new Set();
   return list.filter((h) => { const k = h.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
 }
+
+// 反轉調色盤順序（B56）
+export function reversePalette(list) { return list.slice().reverse(); }
