@@ -65,7 +65,7 @@ const hash = crypto.createHash('sha1');
   for (const f of fs.readdirSync(dir)) {
     const p = path.join(dir, f);
     if (fs.statSync(p).isDirectory()) walk(p);
-    else if (!p.endsWith('sw.js')) { const rel = path.relative(OUT, p).split(path.sep).join('/'); assets.push('./' + rel); hash.update(fs.readFileSync(p)); }
+    else if (!p.endsWith('sw.js')) { if (p.includes(path.sep + 'fonts' + path.sep)) { hash.update(fs.readFileSync(p)); continue; }  const rel = path.relative(OUT, p).split(path.sep).join('/'); assets.push('./' + rel); hash.update(fs.readFileSync(p)); }
   }
 })(OUT);
 assets.push('./');

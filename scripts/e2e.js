@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1883,6 +1883,34 @@ async function runProfile(name, target, base) {
     if (a.t < a.s && (await E(() => window.innerWidth)) > 760) ok(b.t > b.s, 'left-hand mode swaps toolbar and side panel', JSON.stringify([a, b]));
     else ok(await E(() => document.getElementById('app').classList.contains('lefty')), 'lefty class set');
     await E(() => window.__pixelStudio.setUI({ leftHand: false }));
+  };
+  S.text = async () => {
+    await newProject(64, 32, 'text');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'text', primary: [255, 0, 0, 255], textValue: '', textScale: 1, textSpacing: 0, textLang: 'zh_tw' }));
+    for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textInput'))); i++) await settle(100);
+    ok(await E(() => !!document.getElementById('textInput')), 'text tool shows input box');
+    await stroke([[2, 2]], 'pen');
+    const type = (v) => E((v) => { const t = document.getElementById('textInput'); t.value = v; t.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+    await type('Hi中');
+    await settle(500);
+    ok(await E(() => window.__pixelStudio.app.floating?.label === '文字'), 'typing creates floating text preview');
+    const cnt = () => E(() => { const f = window.__pixelStudio.app.floating; let n = 0; for (let i = 3; i < f.buf.length; i += 4) if (f.buf[i]) n++; return [n, f.w, f.h, f.x, f.y]; });
+    const [n1, w1, h1, fx, fy] = await cnt();
+    ok(n1 > 20 && w1 === 6 + 6 + 12 && h1 === 12 && fx === 2 && fy === 2, 'Latin 6px + CJK 12px layout (24×12 @2,2)', JSON.stringify([n1, w1, h1, fx, fy]));
+    await E(() => window.__pixelStudio.setUI({ textScale: 2 })); await type('Hi中'); await settle(400);
+    ok((await cnt())[1] === 48, 'scale ×2 doubles width');
+    await E(() => window.__pixelStudio.setUI({ textScale: 1 })); await type('国');
+    await E(() => window.__pixelStudio.setUI({ textLang: 'zh_hans' })); await type('国'); await settle(400);
+    const [n2] = await cnt();
+    ok(n2 > 20, 'simplified glyph renders');
+    await type('Hi\n中文'); await settle(400);
+    ok((await cnt())[2] === 26, 'two lines: 12+2+12 high');
+    await E(() => document.getElementById('textDone').click());
+    await settle(150);
+    ok(await E(() => !window.__pixelStudio.app.floating), 'placing commits the text');
+    ok(await E(() => { let n = 0; for (let y = 0; y < 32; y++) for (let x = 0; x < 64; x++) { const c = window.__e2e.cel(x, y); if (c[3] === 255 && c[0] === 255) n++; } return n > 40; }), 'text pixels written into the layer in current colour');
+    await E(() => window.__pixelStudio.undo ? window.__pixelStudio.undo() : null);
+    await E(() => window.__pixelStudio.setUI({ tool: 'pencil', textValue: '' }));
   };
   S.penbadge = async () => {
     await newProject(16, 16, 'pb');

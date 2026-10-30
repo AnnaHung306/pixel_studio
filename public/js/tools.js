@@ -4,6 +4,7 @@ import {
   createBuffer, setPixel, getPixel, linePoints, rectPoints, ellipsePoints, floodFill, fillRegion, gradientApply, ditherHit, polygonMask,
   pasteOver, flipBuffer, rotateBuffer, reframe, wrapShift, isEmpty, compositeLayers, rgbaToHex, celKey, b64ToBytes,
 } from './core/raster.js';
+import { ensureText, renderText } from './core/pixelfont.js';
 import { shadeStep, nearestPaletteColor } from './core/palettes.js';
 
 export const TOOLS = [
@@ -17,6 +18,7 @@ export const TOOLS = [
   { id: 'select', label: '矩形選取', key: 'M' },
   { id: 'lasso', label: '套索選取', key: 'Q' },
   { id: 'move', label: '移動', key: 'V' },
+  { id: 'text', label: '文字', key: 'T' },
   { id: 'hand', label: '平移畫面', key: 'H' },
 ];
 
@@ -177,6 +179,19 @@ export function down(pt, info) {
       stroke = { tool: 'eyedropper', secondary };
       pick(x, y, secondary);
       break;
+    case 'text': {
+      if (!editable()) return;
+      const fl = app.floating;
+      if (fl && fl.label === '文字') {
+        if (insideFloating(x, y)) { stroke = { tool: 'movefloat', sx: x, sy: y, fx: fl.x, fy: fl.y }; break; }
+        fl.x = x; fl.y = y; refreshFloating(); break;
+      }
+      dropFloating();
+      app.ui.textAt = [x, y];
+      updateText();
+      document.getElementById('textInput')?.focus();
+      break;
+    }
     case 'select': case 'lasso': {
       const fl = app.floating;
       if (fl && insideFloating(x, y) && !info.shift) { stroke = { tool: 'movefloat', sx: x, sy: y, fx: fl.x, fy: fl.y }; break; }
@@ -579,3 +594,27 @@ export function nudge(dx, dy) {
 
 export function hexOf(c) { return rgbaToHex(c); }
 export { b64ToBytes };
+
+// ---------- text tool (iter 57) ----------
+let textSeq = 0;
+export async function updateText() {
+  const seq = ++textSeq;
+  const u = app.ui, txt = u.textValue || '';
+  const fl = app.floating && app.floating.label === '文字' ? app.floating : null;
+  if (!txt.trim()) { if (fl) cancelFloating(); return null; }
+  await ensureText(txt, u.textFont || 'fusion12m', u.textLang || 'zh_tw');
+  if (seq !== textSeq) return null;
+  let color = u.primary;
+  if (u.paletteLock && color[3] > 0) color = nearestPaletteColor(color, app.doc.meta.palette);
+  const r = renderText(txt, { fontId: u.textFont || 'fusion12m', lang: u.textLang || 'zh_tw', color, scale: u.textScale || 1, spacing: u.textSpacing || 0, lineGap: u.textLineGap ?? 2, align: u.textAlign || 'left' });
+  if (!r) return null;
+  const cur = app.floating && app.floating.label === '文字' ? app.floating : null;
+  const [ax, ay] = cur ? [cur.x, cur.y] : (u.textAt || [1, 1]);
+  if (cur) { app.floating = null; app.overrides.delete(cur.key); }
+  else if (app.floating) dropFloating();
+  const key = activeKey();
+  const base = (app.doc.cels.get(key) || createBuffer(W(), H())).slice();
+  app.floating = { buf: r.buf, mask: new Uint8Array(r.w * r.h).fill(1).map((_, i) => (r.buf[i * 4 + 3] ? 1 : 0)), w: r.w, h: r.h, x: ax, y: ay, base, key, label: '文字', pasted: true };
+  refreshFloating();
+  return app.floating;
+}

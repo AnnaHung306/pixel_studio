@@ -432,7 +432,7 @@ diag.onRecord((e) => {
 });
 
 // ---------- keyboard ----------
-const toolKeys = { b: 'pencil', e: 'eraser', g: 'fill', i: 'eyedropper', l: 'line', u: 'rect', o: 'ellipse', m: 'select', q: 'lasso', v: 'move', h: 'hand' };
+const toolKeys = { b: 'pencil', e: 'eraser', g: 'fill', i: 'eyedropper', l: 'line', u: 'rect', o: 'ellipse', m: 'select', q: 'lasso', v: 'move', h: 'hand', t: 'text' };
 let pasteHandled = false;
 function onKey(e) {
   if (isTyping(e) || document.querySelector('#modal-root .backdrop')) return;

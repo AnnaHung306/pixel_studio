@@ -1,7 +1,8 @@
 // UI panels: toolbar, options bar, color editor, palette, timeline (layers × frames), onion skin, references, history, preview.
 import { app, on, emit, setUI, commit, undo, redo, jumpHistory, activeLayer, layerIndex, toast, celKey, historyBytes } from './state.js';
 import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confirmBox, capture, claimPencil } from './dom.js';
-import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, customBrushFromSelection, dropFloating, cancelFloating } from './tools.js';
+import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, customBrushFromSelection, dropFloating, cancelFloating, updateText } from './tools.js';
+import { LANGS } from './core/pixelfont.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
 import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, reversePalette } from './core/palettes.js';
@@ -19,6 +20,7 @@ const ICONS = {
   select: ['............', '.##.##.##.#.', '.#........#.', '..........#.', '.#..........', '.#........#.', '..........#.', '.#..........', '.#........#.', '.#.##.##.##.', '............', '............'],
   lasso: ['............', '...######...', '..#......#..', '.#........#.', '.#........#.', '..#......#..', '...##..##...', '.....##.....', '....#.......', '....#.......', '.....#......', '............'],
   move: ['.....##.....', '....####....', '.....##.....', '.....##.....', '.#...##...#.', '############', '############', '.#...##...#.', '.....##.....', '.....##.....', '....####....', '.....##.....'],
+  text: ['............', '.########...', '.########...', '....##......', '....##......', '....##......', '....##......', '....##......', '....##......', '....##......', '............', '............'],
   hand: ['.....#......', '...#.#.#....', '...#.#.#.#..', '...#.#.#.#..', '.#.#.#.#.#..', '.#.#######..', '.#########..', '..########..', '..#######...', '...######...', '...######...', '............'],
 };
 function icon(name) {
@@ -45,7 +47,7 @@ export function renderToolbar() {
   if (mini) mini.style.background = colorBg(app.ui.primary);
 }
 export function setTool(id) {
-  if (!['select', 'lasso', 'move'].includes(id)) dropFloating();
+  if (!['select', 'lasso', 'move'].includes(id) && !(id === 'text' && app.floating?.label === '文字')) dropFloating();
   setUI({ tool: id, prevTool: app.ui.tool !== id ? app.ui.tool : app.ui.prevTool, tempPick: false });
 }
 export function swapColors() { setUI({ primary: app.ui.secondary, secondary: app.ui.primary }); }
@@ -101,6 +103,19 @@ export function renderOptions() {
     add(...selectionButtons());
     if (t === 'move') add(tog('🔁 環繞移動', 'wrapMove', '移出邊界的像素會從另一側出現（無縫 tile 製作）'));
     if (t === 'move') add(tog('🔗 連動所有圖層', 'linkMove', '移動時同時移動此影格所有可見且未鎖定的圖層'));
+  } else if (t === 'text') {
+    const u = app.ui;
+    const ta = h('textarea', { id: 'textInput', rows: 2, placeholder: '輸入文字（繁／簡／English），先點畫布選位置', 'aria-label': '文字內容', spellcheck: false, autocapitalize: 'off', value: u.textValue || '' });
+    ta.value = u.textValue || '';
+    ta.addEventListener('input', () => { u.textValue = ta.value; updateText(); });
+    const sel = (id, title, opts, key, num) => { const s = h('select', { id, title, onchange: () => { u[key] = num ? +s.value : s.value; setUI({}); updateText(); } }, opts.map(([v, l]) => h('option', { value: v, selected: String(u[key] ?? opts[0][0]) === String(v) }, l))); return h('label', {}, s); };
+    add(ta,
+      sel('textLang', '語言字形：繁體（台灣）／簡體', LANGS.map((l) => [l.id, l.label]), 'textLang'),
+      sel('textScale', '放大倍率（整數倍，保持像素銳利）', [[1, '×1'], [2, '×2'], [3, '×3'], [4, '×4']], 'textScale', true),
+      sel('textSpacing', '字距', [[0, '字距 0'], [1, '字距 1'], [2, '字距 2'], [-1, '字距 -1']], 'textSpacing', true),
+      sel('textAlign', '多行對齊', [['left', '靠左'], ['center', '置中'], ['right', '靠右']], 'textAlign'),
+      h('button', { class: 'tb on', id: 'textDone', onclick: () => { if (app.floating?.label === '文字') { dropFloating(); u.textValue = ''; setUI({}); } }, title: '把文字寫入圖層（可復原）' }, '✓ 放置'),
+      h('span', { class: 'small' }, '點畫布設定位置；預覽可拖曳。字型：Fusion Pixel 12px (OFL)'));
   } else if (t === 'hand') {
     add(h('button', { class: 'tb', onclick: fitView }, '符合視窗'));
   }
