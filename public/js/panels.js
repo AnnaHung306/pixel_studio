@@ -110,7 +110,10 @@ export function renderOptions() {
     const ta = h('textarea', { id: 'textInput', rows: 2, placeholder: '輸入文字（繁／簡／English），先點畫布選位置', 'aria-label': '文字內容', spellcheck: false, autocapitalize: 'off', value: u.textValue || '' });
     ta.value = u.textValue || '';
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); document.getElementById('textDone')?.click(); } });
-    ta.addEventListener('input', () => { u.textValue = ta.value; updateText(); });
+    let composing = false; // IME (注音/拼音): don't re-render the preview for half-typed syllables
+    ta.addEventListener('compositionstart', () => { composing = true; });
+    ta.addEventListener('compositionend', () => { composing = false; u.textValue = ta.value; updateText(); });
+    ta.addEventListener('input', (e) => { u.textValue = ta.value; if (composing || e.isComposing) return; updateText(); });
     const sel = (id, title, opts, key, num) => { const s = h('select', { id, title, onchange: () => { u[key] = num ? +s.value : s.value; setUI({}); updateText(); } }, opts.map(([v, l]) => h('option', { value: v, selected: String(u[key] ?? opts[0][0]) === String(v) }, l))); return h('label', {}, s); };
     add(ta,
       sel('textLang', '語言字形：繁體（台灣）／簡體', LANGS.map((l) => [l.id, l.label]), 'textLang'),

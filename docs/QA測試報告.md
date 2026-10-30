@@ -6,6 +6,25 @@
 
 <!-- latest -->
 
+## v1.54.1（2026-10-31，迭代 64）
+
+smoke 54/54；e2e 18 組 8897 項通過、0 失敗；單元測試 smoke 54/54 與 npm test 72 通過。
+
+| 裝置設定 | 引擎 | 伺服器 | 純靜態 dist/ |
+|---|---|---|---|
+| iPad Pro 11 橫向 | webkit 27.2 | 500 ✅ | 481 ✅ |
+| iPad Pro 11 直向 | webkit 27.2 | 500 ✅ | 481 ✅ |
+| iPad（第 7 代）橫向 | webkit 27.2 | 500 ✅ | 481 ✅ |
+| iPad（第 7 代）直向 | webkit 27.2 | 500 ✅ | 481 ✅ |
+| iPad mini 橫向 | webkit 27.2 | 500 ✅ | 481 ✅ |
+| iPad mini 直向 | webkit 27.2 | 500 ✅ | 481 ✅ |
+| iPhone 14 直向 | webkit 27.2 | 516 ✅ | 497 ✅ |
+| iPhone 14 橫向 | webkit 27.2 | 516 ✅ | 497 ✅ |
+| 桌面 1920×1080 | chromium 156.0.8078.4 | 502 ✅ | 483 ✅ |
+
+e2e textime、textoffline 兩組。
+
+
 ## v1.54.0（2026-10-31，迭代 63）
 
 smoke 54/54；e2e 18 組 8753 項通過、0 失敗；單元測試 smoke 54/54 與 npm test 72 通過。

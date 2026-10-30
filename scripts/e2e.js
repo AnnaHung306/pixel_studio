@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1930,6 +1930,54 @@ async function runProfile(name, target, base) {
     ok(await E(() => !window.__pixelStudio.app.floating), 'placing commits the text');
     ok(await E(() => { let n = 0; for (let y = 0; y < 32; y++) for (let x = 0; x < 64; x++) { const c = window.__e2e.cel(x, y); if (c[3] === 255 && c[0] === 255) n++; } return n > 40; }), 'text pixels written into the layer in current colour');
     await E(() => window.__pixelStudio.undo ? window.__pixelStudio.undo() : null);
+    await E(() => window.__pixelStudio.setUI({ tool: 'pencil', textValue: '' }));
+  };
+  S.textime = async () => {
+    await newProject(64, 32, 'textime');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'text', primary: [255, 0, 0, 255], textValue: '', textScale: 1, textSpacing: 0, textLang: 'zh_tw', textSize: 12, textStyle: 'mono', textEffect: 'none', textVertical: 'h', textAlign: 'left' }));
+    for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textInput'))); i++) await settle(100);
+    await stroke([[2, 2]], 'pen');
+    const w = () => E(() => window.__pixelStudio.app.floating?.w ?? 0);
+    await E(() => { const t = document.getElementById('textInput'); t.focus(); t.value = 'ㄓ'; t.dispatchEvent(new CompositionEvent('compositionstart', { bubbles: true })); t.dispatchEvent(new InputEvent('input', { bubbles: true, isComposing: true, inputType: 'insertCompositionText', data: 'ㄓ' })); });
+    await settle(400);
+    ok((await w()) === 0, 'IME composing: preview not rendered for half-typed syllable');
+    await E(() => { const t = document.getElementById('textInput'); t.value = '中'; t.dispatchEvent(new InputEvent('input', { bubbles: true, isComposing: true, inputType: 'insertCompositionText', data: '中' })); t.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '中' })); });
+    await settle(500);
+    ok((await w()) === 12, 'compositionend renders the committed character', String(await w()));
+    await E(() => { const t = document.getElementById('textInput'); t.value = '中文'; t.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '文' })); });
+    await settle(400);
+    ok((await w()) === 24, 'plain (non-IME) input still updates live');
+    await E(() => window.__pixelStudio.setUI({ tool: 'pencil', textValue: '' }));
+  };
+  S.textoffline = async () => {
+    const sw = await E(async () => { if (!('serviceWorker' in navigator)) return 'unsupported'; try { const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((r) => setTimeout(() => r(null), 8000))]); return reg ? 'active' : 'timeout'; } catch (e) { return 'error'; } });
+    if (sw !== 'active') { ok(true, 'textoffline: skipped (no service worker: ' + sw + ')'); return; }
+    await newProject(64, 32, 'textoff');
+    const setup = () => E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'text', primary: [255, 0, 0, 255], textValue: '', textScale: 1, textSpacing: 0, textLang: 'zh_tw', textSize: 12, textStyle: 'mono', textEffect: 'none', textVertical: 'h' }));
+    await setup();
+    for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textInput'))); i++) await settle(100);
+    await stroke([[2, 2]], 'pen');
+    const type = (v) => E((v) => { const t = document.getElementById('textInput'); t.value = v; t.dispatchEvent(new Event('input', { bubbles: true })); }, v);
+    await type('離線字型'); await settle(800);
+    const ink = () => E(() => { const f = window.__pixelStudio.app.floating; let n = 0; if (f) for (let i = 3; i < f.buf.length; i += 4) if (f.buf[i]) n++; return n; });
+    const n0 = await ink();
+    ok(n0 > 30, 'online: CJK text renders (font fetched and cached by the service worker)', String(n0));
+    await sleep(300);
+    const cached = await E(async () => { let c = 0; for (const k of await caches.keys()) { const ks = await (await caches.open(k)).keys(); c += ks.filter((r) => /\/fonts\//.test(r.url)).length; } return c; });
+    ok(cached > 0, 'font shards are in the offline cache', String(cached));
+    await context.setOffline(true);
+    let up = false;
+    try { await page.reload({ waitUntil: 'load', timeout: 10000 }); up = await page.waitForFunction(() => window.__pixelStudio?.app?.doc, null, { timeout: 8000 }).then(() => true, () => false); } catch {}
+    if (up) {
+      await setup();
+      for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textInput'))); i++) await settle(100);
+      await stroke([[2, 2]], 'pen');
+      await type('離線字型'); await settle(800);
+    }
+    const n1 = up ? await ink() : 0;
+    await context.setOffline(false);
+    ok(up && n1 === n0, 'offline after reload: same text renders identically from the cache', JSON.stringify([up, n0, n1]));
+    if (!up) await boot();
     await E(() => window.__pixelStudio.setUI({ tool: 'pencil', textValue: '' }));
   };
   S.conv = async () => {
