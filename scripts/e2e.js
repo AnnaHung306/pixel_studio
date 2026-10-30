@@ -1912,6 +1912,15 @@ async function runProfile(name, target, base) {
     }
     ok(await E(() => !!document.getElementById('textSize') && !!document.getElementById('textStyle')), 'size and style selectors present');
     await E(() => window.__pixelStudio.setUI({ textSize: 12, textStyle: 'mono' })); await type('Hi\n中文'); await settle(400);
+    await E(() => window.__pixelStudio.setUI({ secondary: [0, 255, 0, 255], textEffect: 'outline' })); await type('Hi\n中文'); await settle(400);
+    const dO = await cnt();
+    ok(dO[1] === 26 && dO[2] === 28, 'outline effect grows bitmap by 1px each side', JSON.stringify(dO));
+    await E(() => window.__pixelStudio.setUI({ textEffect: 'none' })); await type('Hi\n中文'); await settle(400);
+    await E(() => { const t = document.getElementById('textInput'); t.focus(); t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true })); });
+    await settle(200);
+    ok(await E(() => !window.__pixelStudio.app.floating), 'Ctrl+Enter places the text');
+    await E(() => window.__pixelStudio.undo ? window.__pixelStudio.undo() : null);
+    await type('Hi\n中文'); await settle(400);
     await E(() => document.getElementById('textDone').click());
     await settle(150);
     ok(await E(() => !window.__pixelStudio.app.floating), 'placing commits the text');

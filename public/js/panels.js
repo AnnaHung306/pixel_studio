@@ -109,6 +109,7 @@ export function renderOptions() {
     const u = app.ui;
     const ta = h('textarea', { id: 'textInput', rows: 2, placeholder: '輸入文字（繁／簡／English），先點畫布選位置', 'aria-label': '文字內容', spellcheck: false, autocapitalize: 'off', value: u.textValue || '' });
     ta.value = u.textValue || '';
+    ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); document.getElementById('textDone')?.click(); } });
     ta.addEventListener('input', () => { u.textValue = ta.value; updateText(); });
     const sel = (id, title, opts, key, num) => { const s = h('select', { id, title, onchange: () => { u[key] = num ? +s.value : s.value; setUI({}); updateText(); } }, opts.map(([v, l]) => h('option', { value: v, selected: String(u[key] ?? opts[0][0]) === String(v) }, l))); return h('label', {}, s); };
     add(ta,
@@ -118,6 +119,7 @@ export function renderOptions() {
       sel('textScale', '放大倍率（整數倍，保持像素銳利）', [[1, '×1'], [2, '×2'], [3, '×3'], [4, '×4']], 'textScale', true),
       sel('textSpacing', '字距', [[0, '字距 0'], [1, '字距 1'], [2, '字距 2'], [-1, '字距 -1']], 'textSpacing', true),
       sel('textAlign', '多行對齊', [['left', '靠左'], ['center', '置中'], ['right', '靠右']], 'textAlign'),
+      sel('textEffect', '文字效果：外框／陰影使用副色', [['none', '無效果'], ['outline', '外框'], ['shadow', '陰影']], 'textEffect'),
       h('button', { class: 'tb', id: 'textConv', onclick: () => converterDialog(), title: '向量→像素轉換器：把系統字型轉成像素字，可預覽並手修' }, '🔤 轉換器'),
       h('button', { class: 'tb', id: 'textDict', onclick: () => dictionaryDialog(), title: '字形字典：自訂字形，打字時優先使用' }, '📖 字典'),
       h('button', { class: 'tb on', id: 'textDone', onclick: () => { if (app.floating?.label === '文字') { dropFloating(); u.textValue = ''; setUI({}); } }, title: '把文字寫入圖層（可復原）' }, '✓ 放置'),

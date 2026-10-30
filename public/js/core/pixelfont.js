@@ -65,7 +65,27 @@ export function glyphOf(dir, cp) {
   return { adv, rows, h: pg.h };
 }
 // Render text to an RGBA buffer. Pages must be loaded (await ensureText). Returns null for empty text.
-export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color = [0, 0, 0, 255], scale = 1, spacing = 0, lineGap = 2, align = 'left' } = {}) {
+export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color = [0, 0, 0, 255], scale = 1, spacing = 0, lineGap = 2, align = 'left', effect = 'none', effColor = [0, 0, 0, 255] } = {}) {
+  const r0 = renderTextBase(text, { fontId, lang, color, scale, spacing, lineGap, align });
+  return r0 && effect !== 'none' ? applyTextEffect(r0, effect, effColor, scale) : r0;
+}
+// Outline (1 text-pixel ring, 8-neighbour) or drop shadow (+1,+1). Grows the bitmap by one text-pixel.
+export function applyTextEffect(r, effect, ec, scale = 1) {
+  const pad = scale, W = r.w + pad * 2, H = r.h + pad * 2, buf = new Uint8ClampedArray(W * H * 4);
+  const on = (x, y) => x >= 0 && y >= 0 && x < r.w && y < r.h && r.buf[(y * r.w + x) * 4 + 3] > 0;
+  const put = (x, y, c) => { const o = (y * W + x) * 4; buf[o] = c[0]; buf[o + 1] = c[1]; buf[o + 2] = c[2]; buf[o + 3] = c[3]; };
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const sx = x - pad, sy = y - pad;
+    if (on(sx, sy)) continue;
+    let hit = false;
+    if (effect === 'outline') { for (let dy = -scale; dy <= scale && !hit; dy += scale) for (let dx = -scale; dx <= scale; dx += scale) if ((dx || dy) && on(sx + dx, sy + dy)) { hit = true; break; } }
+    else hit = on(sx - scale, sy - scale);
+    if (hit) put(x, y, ec);
+  }
+  for (let y = 0; y < r.h; y++) for (let x = 0; x < r.w; x++) if (on(x, y)) { const o = (y * r.w + x) * 4; put(x + pad, y + pad, [r.buf[o], r.buf[o + 1], r.buf[o + 2], r.buf[o + 3]]); }
+  return { buf, w: W, h: H };
+}
+function renderTextBase(text, { fontId, lang, color, scale, spacing, lineGap, align }) {
   const dir = fontDir(fontId, lang);
   const lines = String(text).replace(/\r/g, '').split('\n');
   const GH = fontInfo(fontId).h, GH_SIZE = fontInfo(fontId).size;

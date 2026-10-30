@@ -45,3 +45,12 @@ test('pixelfont: every font/lang renders 中A with its own height', async () => 
     assert.ok(on > 10, f.id + lang);
   }
 });
+test('pixelfont: outline and shadow effects (B63)', async () => {
+  await ensureText('I', 'fusion12m', 'zh_tw');
+  const base = renderText('I'), ol = renderText('I', { effect: 'outline', effColor: [9, 9, 9, 255] }), sh = renderText('I', { effect: 'shadow', effColor: [9, 9, 9, 255] });
+  const cnt = (r, v) => { let n = 0; for (let i = 0; i < r.buf.length; i += 4) if (r.buf[i + 3] && (v === undefined || r.buf[i] === v)) n++; return n; };
+  assert.equal(ol.w, base.w + 2); assert.equal(ol.h, base.h + 2);
+  assert.equal(cnt(ol, 0), cnt(base)); assert.ok(cnt(ol, 9) > cnt(base) / 2);
+  assert.ok(cnt(sh, 9) > 0 && cnt(sh, 9) <= cnt(base));
+  const o2 = renderText('I', { scale: 2, effect: 'outline' }); assert.equal(o2.w, base.w * 2 + 4);
+});
