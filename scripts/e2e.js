@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1917,6 +1917,43 @@ async function runProfile(name, target, base) {
     ok(await E(() => !window.__pixelStudio.app.floating), 'placing commits the text');
     ok(await E(() => { let n = 0; for (let y = 0; y < 32; y++) for (let x = 0; x < 64; x++) { const c = window.__e2e.cel(x, y); if (c[3] === 255 && c[0] === 255) n++; } return n > 40; }), 'text pixels written into the layer in current colour');
     await E(() => window.__pixelStudio.undo ? window.__pixelStudio.undo() : null);
+    await E(() => window.__pixelStudio.setUI({ tool: 'pencil', textValue: '' }));
+  };
+  S.conv = async () => {
+    await newProject(64, 32, 'conv');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'text', primary: [0, 0, 255, 255], textValue: '' }));
+    for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textConv'))); i++) await settle(100);
+    ok(await E(() => !!document.getElementById('textConv')), 'converter button in text tool');
+    await E(() => document.getElementById('textConv').click());
+    await settle(300);
+    ok(await E(() => !!document.getElementById('convPreview')), 'converter dialog opens');
+    const set = (id, v) => E(([id, v]) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }, [id, v]);
+    await set('convText', '永'); await set('convSize', '16'); await settle(300);
+    const info = () => E(() => document.getElementById('convInfo').textContent);
+    ok(/16×16/.test(await info()), 'preview is 16x16', await info());
+    const ink0 = +/(\d+) 點/.exec(await info())[1];
+    ok(ink0 > 15, 'converted glyph has ink', String(ink0));
+    await set('convThr', '200'); await settle(200);
+    const ink1 = +/(\d+) 點/.exec(await info())[1];
+    ok(ink1 <= ink0, 'higher threshold gives no more ink', ink0 + '→' + ink1);
+    await E(() => { const c = document.getElementById('convPreview'), r = c.getBoundingClientRect(), z = +c.dataset.zoom * (r.width / c.width); c.dispatchEvent(new PointerEvent('pointerdown', { clientX: r.left + z * 0.5, clientY: r.top + z * 0.5, bubbles: true })); });
+    ok(/已手修/.test(await info()), 'clicking a cell hand-edits');
+    await set('convText', '永字'); await settle(300);
+    ok(/32×16/.test(await info()), 'two chars side by side');
+    await E(() => [...document.querySelectorAll('.modal footer button')].find((b) => b.textContent === '放到畫布').click());
+    await settle(300);
+    const f = await E(() => { const f = window.__pixelStudio.app.floating; if (!f) return null; let n = 0; for (let i = 3; i < f.buf.length; i += 4) if (f.buf[i]) n++; let b = -1; for (let i = 3; i < f.buf.length; i += 4) if (f.buf[i]) { b = f.buf[i - 1]; break; } return [f.w, f.h, n, b]; });
+    ok(f && f[0] === 32 && f[1] === 16 && f[2] > 20 && f[3] === 255, 'placed as floating in primary colour', JSON.stringify(f));
+    await E(() => window.__pixelStudio.setUI({ textValue: '', tool: 'pencil' }));
+    await E(() => { const a = window.__pixelStudio.app; });
+    // fallback for a char absent from the bitmap font keeps the layout width
+    await E(() => window.__pixelStudio.setUI({ tool: 'text', textSize: 12, textStyle: 'mono', textLang: 'zh_tw' }));
+    for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textInput'))); i++) await settle(100);
+    await stroke([[2, 2]], 'pen');
+    await E(() => { const t = document.getElementById('textInput'); t.value = 'A\u{20000}'; t.dispatchEvent(new Event('input', { bubbles: true })); });
+    await settle(600);
+    const w = await E(() => window.__pixelStudio.app.floating?.w);
+    ok(w === 6 + 12 || w === 6 + 6, 'missing glyph handled without crash (fallback/blank)', String(w));
     await E(() => window.__pixelStudio.setUI({ tool: 'pencil', textValue: '' }));
   };
   S.penbadge = async () => {

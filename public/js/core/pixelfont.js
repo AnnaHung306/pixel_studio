@@ -25,16 +25,33 @@ export function fontDir(fontId, lang) { const f = fontInfo(fontId); return f.dir
 export function loadPage(dir, page) {
   const k = dir + '/' + page;
   if (!cache.has(k)) {
-    const p = fetch(base + dir + '/' + page.toString(16) + '.json').then((r) => (r.ok ? r.json() : null)).catch(() => null).then((j) => { cache.set(k, j || { g: {}, h: 12, a: 10 }); return cache.get(k); });
-    cache.set(k, p);
+    if (page > 0xf) cache.set(k, { g: {}, h: 12, a: 10 }); // BMP only: pages above U+FFFF are not shipped
+    else { const p = fetch(base + dir + '/' + page.toString(16) + '.json').then((r) => (r.ok ? r.json() : null)).catch(() => null).then((j) => { cache.set(k, j || { g: {}, h: 12, a: 10 }); return cache.get(k); });
+    cache.set(k, p); }
   }
   return cache.get(k);
 }
+// Converter fallback (B61): glyphs missing from the bitmap font are generated from a vector font at the font's pixel height.
+// fallback(ch, px) → { rows:[16-bit], adv } | null. Results are cached per (px, codepoint) and flagged auto.
+let fallback = null;
+const fbCache = new Map();
+export function setFallback(fn) { fallback = fn; fbCache.clear(); }
+export function fallbackGlyph(cp, px) { return fbCache.get(px + ':' + cp) || null; }
+export const isBlank = (ch) => /^[\s\u0000-\u001f\u007f\u200b-\u200f]$/u.test(ch);
 export async function ensureText(text, fontId, lang) {
   const dir = fontDir(fontId, lang);
   const pages = new Set();
   for (const ch of text) pages.add(ch.codePointAt(0) >> 12);
   await Promise.all([...pages].map((p) => loadPage(dir, p)));
+  if (fallback) {
+    const px = fontInfo(fontId).size;
+    for (const ch of new Set(text)) {
+      const cp = ch.codePointAt(0);
+      if (isBlank(ch) || glyphOf(dir, cp) || fbCache.has(px + ':' + cp)) continue;
+      const r = fallback(ch, px);
+      if (r) fbCache.set(px + ':' + cp, { ...r, h: px, auto: true });
+    }
+  }
 }
 export function glyphOf(dir, cp) {
   const pg = cache.get(dir + '/' + (cp >> 12));
@@ -56,7 +73,7 @@ export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color =
     let w = 0;
     for (const ch of ln) {
       const cp = ch.codePointAt(0);
-      const g = glyphOf(dir, cp) || glyphOf(dir, 0xfffd) || { adv: ch.charCodeAt(0) < 256 ? GH >> 1 : GH, rows: new Array(GH).fill(0) };
+      const g = glyphOf(dir, cp) || fallbackGlyph(cp, fontInfo(fontId).size) || glyphOf(dir, 0xfffd) || { adv: ch.charCodeAt(0) < 256 ? GH >> 1 : GH, rows: new Array(GH).fill(0) };
       gs.push({ g, x: w });
       w += g.adv + spacing;
     }

@@ -4,7 +4,8 @@ import {
   createBuffer, setPixel, getPixel, linePoints, rectPoints, ellipsePoints, floodFill, fillRegion, gradientApply, ditherHit, polygonMask,
   pasteOver, flipBuffer, rotateBuffer, reframe, wrapShift, isEmpty, compositeLayers, rgbaToHex, celKey, b64ToBytes,
 } from './core/raster.js';
-import { ensureText, renderText, pickFont } from './core/pixelfont.js';
+import { ensureText, renderText, pickFont, setFallback } from './core/pixelfont.js';
+import { convertChar, bitsToRows } from './core/glyphconv.js';
 import { shadeStep, nearestPaletteColor } from './core/palettes.js';
 
 export const TOOLS = [
@@ -616,6 +617,32 @@ export async function updateText() {
   const key = activeKey();
   const base = (app.doc.cels.get(key) || createBuffer(W(), H())).slice();
   app.floating = { buf: r.buf, mask: new Uint8Array(r.w * r.h).fill(1).map((_, i) => (r.buf[i * 4 + 3] ? 1 : 0)), w: r.w, h: r.h, x: ax, y: ay, base, key, label: '文字', pasted: true };
+  refreshFloating();
+  return app.floating;
+}
+
+// ---------- converter fallback + placing a bitmap (iter 59, B61) ----------
+if (typeof document !== 'undefined') {
+  setFallback((ch, px) => {
+    try {
+      const r = convertChar(ch, px);
+      if (!r.bits.some((v) => v)) return null;
+      return { rows: bitsToRows(r.bits, px, px), adv: px };
+    } catch { return null; }
+  });
+}
+// Put a 1-bit bitmap (w×h) on the canvas as a floating, movable selection in the primary colour.
+export function placeBits(bits, w, h, label = '轉換字') {
+  const u = app.ui;
+  let color = u.primary;
+  if (u.paletteLock && color[3] > 0) color = nearestPaletteColor(color, app.doc.meta.palette);
+  const buf = new Uint8ClampedArray(w * h * 4), mask = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) if (bits[i]) { buf.set(color, i * 4); mask[i] = 1; }
+  if (app.floating) dropFloating();
+  const [ax, ay] = u.textAt || [1, 1];
+  const key = activeKey();
+  const base = (app.doc.cels.get(key) || createBuffer(W(), H())).slice();
+  app.floating = { buf, mask, w, h, x: ax, y: ay, base, key, label, pasted: true };
   refreshFloating();
   return app.floating;
 }
