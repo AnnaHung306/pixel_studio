@@ -1,14 +1,27 @@
 // Pixel-font text rendering (ADR-0xx): bitmap glyphs are pre-sliced by build tools (work/tools/bdf2slices.py)
 // into public/fonts/<fontId>/<page>.json (page = codepoint >> 12), loaded on demand and cached by the Service Worker.
 // Glyph record: "advance:rows" where rows = H × 4 hex digits (16-bit, MSB = leftmost pixel).
+const L = 'SIL OFL 1.1 · TakWolf/fusion-pixel-font';
+const dirs = (id) => ({ zh_tw: id + '-zh_tw', zh_hans: id + '-zh_hans' });
 export const FONTS = [
-  { id: 'fusion12m', label: 'Fusion Pixel 12px（等寬）', size: 12, dirs: { zh_tw: 'fusion12m-zh_tw', zh_hans: 'fusion12m-zh_hans' }, license: 'SIL OFL 1.1 · TakWolf/fusion-pixel-font' },
+  { id: 'fusion8m', label: 'Fusion Pixel 8px（等寬）', size: 8, style: 'mono', h: 8, dirs: dirs('fusion8m'), license: L },
+  { id: 'fusion10m', label: 'Fusion Pixel 10px（等寬）', size: 10, style: 'mono', h: 10, dirs: dirs('fusion10m'), license: L },
+  { id: 'fusion12m', label: 'Fusion Pixel 12px（等寬）', size: 12, style: 'mono', h: 12, dirs: dirs('fusion12m'), license: L },
+  { id: 'fusion12p', label: 'Fusion Pixel 12px（比例）', size: 12, style: 'prop', h: 16, dirs: dirs('fusion12p'), license: L },
 ];
+export const SIZES = [8, 10, 12];
+export const STYLES = [{ id: 'mono', label: '等寬' }, { id: 'prop', label: '比例' }];
+// Auto font choice by pixel size: nearest available size, preferring the requested style when the size offers it.
+export function pickFont(size = 12, style = 'mono') {
+  const sz = SIZES.reduce((b, s) => (Math.abs(s - size) < Math.abs(b - size) ? s : b), SIZES[0]);
+  return (FONTS.find((f) => f.size === sz && f.style === style) || FONTS.find((f) => f.size === sz)).id;
+}
+export function fontInfo(id) { return FONTS.find((x) => x.id === id) || FONTS[2]; }
 export const LANGS = [{ id: 'zh_tw', label: '繁體中文 / English' }, { id: 'zh_hans', label: '简体中文 / English' }];
 const cache = new Map(); // "dir/page" -> Promise|object
 let base = new URL('../../fonts/', import.meta.url).href;
 export function setFontBase(u) { base = u; }
-export function fontDir(fontId, lang) { const f = FONTS.find((x) => x.id === fontId) || FONTS[0]; return f.dirs[lang] || Object.values(f.dirs)[0]; }
+export function fontDir(fontId, lang) { const f = fontInfo(fontId); return f.dirs[lang] || Object.values(f.dirs)[0]; }
 export function loadPage(dir, page) {
   const k = dir + '/' + page;
   if (!cache.has(k)) {
@@ -37,13 +50,13 @@ export function glyphOf(dir, cp) {
 export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color = [0, 0, 0, 255], scale = 1, spacing = 0, lineGap = 2, align = 'left' } = {}) {
   const dir = fontDir(fontId, lang);
   const lines = String(text).replace(/\r/g, '').split('\n');
-  const GH = 12;
+  const GH = fontInfo(fontId).h;
   const laid = lines.map((ln) => {
     const gs = [];
     let w = 0;
     for (const ch of ln) {
       const cp = ch.codePointAt(0);
-      const g = glyphOf(dir, cp) || glyphOf(dir, 0xfffd) || { adv: ch.charCodeAt(0) < 256 ? 6 : 12, rows: new Array(GH).fill(0) };
+      const g = glyphOf(dir, cp) || glyphOf(dir, 0xfffd) || { adv: ch.charCodeAt(0) < 256 ? GH >> 1 : GH, rows: new Array(GH).fill(0) };
       gs.push({ g, x: w });
       w += g.adv + spacing;
     }

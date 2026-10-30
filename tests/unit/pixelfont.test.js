@@ -30,3 +30,18 @@ test('pixelfont: renderText layout and colour', async () => {
 test('pixelfont: licence files shipped', () => {
   assert.ok(fs.existsSync(new URL('../../public/fonts/OFL.txt', import.meta.url)));
 });
+import { pickFont, FONTS } from '../../public/js/core/pixelfont.js';
+test('pixelfont: auto font by pixel size and style', () => {
+  assert.equal(pickFont(8), 'fusion8m'); assert.equal(pickFont(10, 'prop'), 'fusion10m');
+  assert.equal(pickFont(12, 'prop'), 'fusion12p'); assert.equal(pickFont(12), 'fusion12m');
+  assert.equal(pickFont(16), 'fusion12m'); assert.equal(pickFont(9), 'fusion8m');
+});
+test('pixelfont: every font/lang renders 中A with its own height', async () => {
+  for (const f of FONTS) for (const lang of ['zh_tw', 'zh_hans']) {
+    await ensureText('中A', f.id, lang);
+    const r = renderText('中A', { fontId: f.id, lang });
+    assert.equal(r.h, f.h, f.id); assert.ok(r.w >= f.size, f.id);
+    let on = 0; for (let i = 3; i < r.buf.length; i += 4) if (r.buf[i]) on++;
+    assert.ok(on > 10, f.id + lang);
+  }
+});

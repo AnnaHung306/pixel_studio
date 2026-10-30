@@ -1905,6 +1905,13 @@ async function runProfile(name, target, base) {
     ok(n2 > 20, 'simplified glyph renders');
     await type('Hi\n中文'); await settle(400);
     ok((await cnt())[2] === 26, 'two lines: 12+2+12 high');
+    for (const [sz, st, hh, ww] of [[8, 'mono', 8, 12], [10, 'mono', 10, 15], [12, 'prop', 16, null]]) {
+      await E((o) => window.__pixelStudio.setUI({ textSize: o[0], textStyle: o[1] }), [sz, st]); await type('A中'); await settle(500);
+      const d = await cnt();
+      ok(d[2] === hh && (ww === null || d[1] === ww) && d[0] > 8, `auto font ${sz}px ${st}: height ${hh}`, JSON.stringify(d));
+    }
+    ok(await E(() => !!document.getElementById('textSize') && !!document.getElementById('textStyle')), 'size and style selectors present');
+    await E(() => window.__pixelStudio.setUI({ textSize: 12, textStyle: 'mono' })); await type('Hi\n中文'); await settle(400);
     await E(() => document.getElementById('textDone').click());
     await settle(150);
     ok(await E(() => !window.__pixelStudio.app.floating), 'placing commits the text');

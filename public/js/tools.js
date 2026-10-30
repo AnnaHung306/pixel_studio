@@ -4,7 +4,7 @@ import {
   createBuffer, setPixel, getPixel, linePoints, rectPoints, ellipsePoints, floodFill, fillRegion, gradientApply, ditherHit, polygonMask,
   pasteOver, flipBuffer, rotateBuffer, reframe, wrapShift, isEmpty, compositeLayers, rgbaToHex, celKey, b64ToBytes,
 } from './core/raster.js';
-import { ensureText, renderText } from './core/pixelfont.js';
+import { ensureText, renderText, pickFont } from './core/pixelfont.js';
 import { shadeStep, nearestPaletteColor } from './core/palettes.js';
 
 export const TOOLS = [
@@ -602,11 +602,12 @@ export async function updateText() {
   const u = app.ui, txt = u.textValue || '';
   const fl = app.floating && app.floating.label === '文字' ? app.floating : null;
   if (!txt.trim()) { if (fl) cancelFloating(); return null; }
-  await ensureText(txt, u.textFont || 'fusion12m', u.textLang || 'zh_tw');
+  const fid = pickFont(u.textSize || 12, u.textStyle || 'mono');
+  await ensureText(txt, fid, u.textLang || 'zh_tw');
   if (seq !== textSeq) return null;
   let color = u.primary;
   if (u.paletteLock && color[3] > 0) color = nearestPaletteColor(color, app.doc.meta.palette);
-  const r = renderText(txt, { fontId: u.textFont || 'fusion12m', lang: u.textLang || 'zh_tw', color, scale: u.textScale || 1, spacing: u.textSpacing || 0, lineGap: u.textLineGap ?? 2, align: u.textAlign || 'left' });
+  const r = renderText(txt, { fontId: fid, lang: u.textLang || 'zh_tw', color, scale: u.textScale || 1, spacing: u.textSpacing || 0, lineGap: u.textLineGap ?? 2, align: u.textAlign || 'left' });
   if (!r) return null;
   const cur = app.floating && app.floating.label === '文字' ? app.floating : null;
   const [ax, ay] = cur ? [cur.x, cur.y] : (u.textAt || [1, 1]);

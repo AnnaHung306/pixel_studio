@@ -2,7 +2,7 @@
 import { app, on, emit, setUI, commit, undo, redo, jumpHistory, activeLayer, layerIndex, toast, celKey, historyBytes } from './state.js';
 import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confirmBox, capture, claimPencil } from './dom.js';
 import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, customBrushFromSelection, dropFloating, cancelFloating, updateText } from './tools.js';
-import { LANGS } from './core/pixelfont.js';
+import { LANGS, SIZES, STYLES } from './core/pixelfont.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
 import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, reversePalette } from './core/palettes.js';
@@ -111,11 +111,13 @@ export function renderOptions() {
     const sel = (id, title, opts, key, num) => { const s = h('select', { id, title, onchange: () => { u[key] = num ? +s.value : s.value; setUI({}); updateText(); } }, opts.map(([v, l]) => h('option', { value: v, selected: String(u[key] ?? opts[0][0]) === String(v) }, l))); return h('label', {}, s); };
     add(ta,
       sel('textLang', '語言字形：繁體（台灣）／簡體', LANGS.map((l) => [l.id, l.label]), 'textLang'),
+      sel('textSize', '字型像素大小（自動選用對應的 Fusion Pixel 字型）', SIZES.map((n) => [n, n + 'px']), 'textSize', true),
+      sel('textStyle', '風格：等寬／比例（8、10px 僅等寬）', STYLES.map((l) => [l.id, l.label]), 'textStyle'),
       sel('textScale', '放大倍率（整數倍，保持像素銳利）', [[1, '×1'], [2, '×2'], [3, '×3'], [4, '×4']], 'textScale', true),
       sel('textSpacing', '字距', [[0, '字距 0'], [1, '字距 1'], [2, '字距 2'], [-1, '字距 -1']], 'textSpacing', true),
       sel('textAlign', '多行對齊', [['left', '靠左'], ['center', '置中'], ['right', '靠右']], 'textAlign'),
       h('button', { class: 'tb on', id: 'textDone', onclick: () => { if (app.floating?.label === '文字') { dropFloating(); u.textValue = ''; setUI({}); } }, title: '把文字寫入圖層（可復原）' }, '✓ 放置'),
-      h('span', { class: 'small' }, '點畫布設定位置；預覽可拖曳。字型：Fusion Pixel 12px (OFL)'));
+      h('span', { class: 'small' }, '點畫布設定位置；預覽可拖曳。字型：Fusion Pixel 8／10／12px (OFL)'));
   } else if (t === 'hand') {
     add(h('button', { class: 'tb', onclick: fitView }, '符合視窗'));
   }
