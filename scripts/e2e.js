@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1883,6 +1883,17 @@ async function runProfile(name, target, base) {
     if (a.t < a.s && (await E(() => window.innerWidth)) > 760) ok(b.t > b.s, 'left-hand mode swaps toolbar and side panel', JSON.stringify([a, b]));
     else ok(await E(() => document.getElementById('app').classList.contains('lefty')), 'lefty class set');
     await E(() => window.__pixelStudio.setUI({ leftHand: false }));
+  };
+  S.penbadge = async () => {
+    await newProject(16, 16, 'pb');
+    const badge = () => E(() => { const c = getComputedStyle(document.getElementById('stage'), '::after').content; return c && c !== 'none' && c !== 'normal' ? c : ''; });
+    await E(() => window.__pixelStudio.setUI({ penOnly: false }));
+    await settle(80);
+    ok(!(await badge()), 'pen-only badge hidden when off');
+    await E(() => window.__pixelStudio.setUI({ penOnly: true }));
+    await settle(80);
+    ok((await badge()).includes('僅筆繪圖'), 'pen-only badge shown when on');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false }));
   };
   S.focus = async () => {
     await newProject(16, 16, 'focus');

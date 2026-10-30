@@ -170,6 +170,7 @@ function refreshDoc() {
 }
 let lastUiKey = '';
 on('ui', () => document.getElementById('app').classList.toggle('lefty', !!app.ui.leftHand));
+on('ui', () => document.getElementById('app').classList.toggle('penonly', !!app.ui.penOnly));
 on('ui', (patch) => {
   // zoom/pan changes only need the zoom label
   const keys = Object.keys(patch || {});
