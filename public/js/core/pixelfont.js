@@ -1,6 +1,7 @@
 // Pixel-font text rendering (ADR-0xx): bitmap glyphs are pre-sliced by build tools (work/tools/bdf2slices.py)
 // into public/fonts/<fontId>/<page>.json (page = codepoint >> 12), loaded on demand and cached by the Service Worker.
 // Glyph record: "advance:rows" where rows = H × 4 hex digits (16-bit, MSB = leftmost pixel).
+import { dictGlyph } from './glyphdict.js';
 const L = 'SIL OFL 1.1 · TakWolf/fusion-pixel-font';
 const dirs = (id) => ({ zh_tw: id + '-zh_tw', zh_hans: id + '-zh_hans' });
 export const FONTS = [
@@ -67,13 +68,13 @@ export function glyphOf(dir, cp) {
 export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color = [0, 0, 0, 255], scale = 1, spacing = 0, lineGap = 2, align = 'left' } = {}) {
   const dir = fontDir(fontId, lang);
   const lines = String(text).replace(/\r/g, '').split('\n');
-  const GH = fontInfo(fontId).h;
+  const GH = fontInfo(fontId).h, GH_SIZE = fontInfo(fontId).size;
   const laid = lines.map((ln) => {
     const gs = [];
     let w = 0;
     for (const ch of ln) {
       const cp = ch.codePointAt(0);
-      const g = glyphOf(dir, cp) || fallbackGlyph(cp, fontInfo(fontId).size) || glyphOf(dir, 0xfffd) || { adv: ch.charCodeAt(0) < 256 ? GH >> 1 : GH, rows: new Array(GH).fill(0) };
+      const g = dictGlyph(cp, GH_SIZE) || glyphOf(dir, cp) || fallbackGlyph(cp, fontInfo(fontId).size) || glyphOf(dir, 0xfffd) || { adv: ch.charCodeAt(0) < 256 ? GH >> 1 : GH, rows: new Array(GH).fill(0) };
       gs.push({ g, x: w });
       w += g.adv + spacing;
     }

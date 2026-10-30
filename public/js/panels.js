@@ -2,6 +2,7 @@
 import { app, on, emit, setUI, commit, undo, redo, jumpHistory, activeLayer, layerIndex, toast, celKey, historyBytes } from './state.js';
 import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confirmBox, capture, claimPencil } from './dom.js';
 import { converterDialog } from './converter.js';
+import { dictionaryDialog } from './dictionary.js';
 import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, customBrushFromSelection, dropFloating, cancelFloating, updateText } from './tools.js';
 import { LANGS, SIZES, STYLES } from './core/pixelfont.js';
 import * as A from './actions.js';
@@ -118,6 +119,7 @@ export function renderOptions() {
       sel('textSpacing', '字距', [[0, '字距 0'], [1, '字距 1'], [2, '字距 2'], [-1, '字距 -1']], 'textSpacing', true),
       sel('textAlign', '多行對齊', [['left', '靠左'], ['center', '置中'], ['right', '靠右']], 'textAlign'),
       h('button', { class: 'tb', id: 'textConv', onclick: () => converterDialog(), title: '向量→像素轉換器：把系統字型轉成像素字，可預覽並手修' }, '🔤 轉換器'),
+      h('button', { class: 'tb', id: 'textDict', onclick: () => dictionaryDialog(), title: '字形字典：自訂字形，打字時優先使用' }, '📖 字典'),
       h('button', { class: 'tb on', id: 'textDone', onclick: () => { if (app.floating?.label === '文字') { dropFloating(); u.textValue = ''; setUI({}); } }, title: '把文字寫入圖層（可復原）' }, '✓ 放置'),
       h('span', { class: 'small' }, '點畫布設定位置；預覽可拖曳。字型：Fusion Pixel 8／10／12px (OFL)'));
   } else if (t === 'hand') {

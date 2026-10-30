@@ -3,6 +3,7 @@ import { hexToRgba, rgbaToHex } from './core/raster.js';
 import { app, on, emit, setDoc, newDoc, undo, redo, setUI, toast, historyBytes } from './state.js';
 import { initView, fitView, zoomAt, getDocCanvas, isTyping } from './view.js';
 import * as P from './panels.js';
+import { initGlyphStore } from './glyphstore.js';
 import * as T from './tools.js';
 import * as A from './actions.js';
 import * as D from './dialogs.js';
@@ -535,6 +536,7 @@ async function boot() {
   document.getElementById('view').setAttribute('aria-label', '像素畫布');
   document.getElementById('toolbar').setAttribute('role', 'toolbar');
   document.getElementById('toolbar').setAttribute('aria-label', '繪圖工具');
+  initGlyphStore();
   buildSaveBanner();
   buildNoticeBar();
   initView();

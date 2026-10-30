@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1955,6 +1955,40 @@ async function runProfile(name, target, base) {
     const w = await E(() => window.__pixelStudio.app.floating?.w);
     ok(w === 6 + 12 || w === 6 + 6, 'missing glyph handled without crash (fallback/blank)', String(w));
     await E(() => window.__pixelStudio.setUI({ tool: 'pencil', textValue: '' }));
+  };
+  S.dict = async () => {
+    await newProject(64, 32, 'dict');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'text', primary: [255, 0, 0, 255], textValue: '', textSize: 12, textStyle: 'mono', textLang: 'zh_tw' }));
+    for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textDict'))); i++) await settle(100);
+    ok(await E(() => !!document.getElementById('textDict')), 'dictionary button in text tool');
+    const set = (id, v) => E(([id, v]) => { const el = document.getElementById(id); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }, [id, v]);
+    const btn = (label) => E((l) => { const b = [...document.querySelectorAll('.modal button')].find((x) => x.textContent.trim() === l); if (b) b.click(); return !!b; }, label);
+    await E(() => document.getElementById('textDict').click()); await settle(300);
+    ok(/共 0 個/.test(await E(() => document.getElementById('dictCount').textContent)), 'dictionary starts empty');
+    await E(() => document.getElementById('dictNew').click()); await settle(300);
+    ok(await E(() => !!document.getElementById('glyphCanvas')), 'glyph editor opens');
+    await set('glyphChar', 'Q'); await set('glyphSize', '12'); await settle(100);
+    await E(() => { const c = document.getElementById('glyphCanvas'), r = c.getBoundingClientRect(), z = +c.dataset.zoom * (r.width / c.width); for (let x = 0; x < 6; x++) c.dispatchEvent(new PointerEvent('pointerdown', { clientX: r.left + z * (x + .5), clientY: r.top + z * 0.5, bubbles: true, pointerId: 1 })); c.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, pointerId: 1 })); });
+    await btn('存入字典'); await settle(300);
+    ok(/共 1 個/.test(await E(() => document.getElementById('dictCount').textContent)), 'glyph saved to dictionary');
+    // dictionary glyph wins when typing
+    await btn('關閉'); await settle(200);
+    await stroke([[2, 2]], 'pen');
+    await E(() => { const t = document.getElementById('textInput'); t.value = 'Q'; t.dispatchEvent(new Event('input', { bubbles: true })); });
+    await settle(500);
+    const f = await E(() => { const f = window.__pixelStudio.app.floating; if (!f) return null; let n = 0; for (let i = 3; i < f.buf.length; i += 4) if (f.buf[i]) n++; return n; });
+    ok(f === 6, 'typed Q uses the user glyph (6 px, not the built-in)', String(f));
+    // persisted in IndexedDB (separate DB)
+    const stored = await E(() => new Promise((res) => { const q = indexedDB.open('pixel-studio-glyphs'); q.onsuccess = () => { const r = q.result.transaction('glyphs').objectStore('glyphs').count(); r.onsuccess = () => res(r.result); }; q.onerror = () => res(-1); }));
+    ok(stored === 1, 'glyph persisted in IndexedDB', String(stored));
+    // export contains the glyph; delete then import restores
+    const json = await E(async () => (await import('/js/core/glyphdict.js')).exportDict());
+    ok(/pixel-studio-glyphs/.test(json) && json.includes('"cp":81'), 'export JSON has the glyph');
+    await E(async (j) => { const m = await import('/js/core/glyphdict.js'); await m.deleteGlyph(12, 81); return m.importDict(j); }, json);
+    ok(await E(async () => !!(await import('/js/core/glyphdict.js')).dictGlyph(81, 12)), 'import restores the glyph');
+    await E(async () => { const m = await import('/js/core/glyphdict.js'); await m.deleteGlyph(12, 81); });
+    await settle(100);
+    await E(() => window.__pixelStudio.setUI({ textValue: '', tool: 'pencil' }));
   };
   S.penbadge = async () => {
     await newProject(16, 16, 'pb');

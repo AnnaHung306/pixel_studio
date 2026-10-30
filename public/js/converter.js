@@ -2,7 +2,8 @@
 import { h, modal } from './dom.js';
 import { app, toast } from './state.js';
 import { convertGlyph, canvasRender, binarize } from './core/glyphconv.js';
-import { placeBits } from './tools.js';
+import { placeBits, updateText } from './tools.js';
+import { saveGlyph, bitsToGlyphRows, inkWidth, MAX_W } from './core/glyphdict.js';
 
 export function converterDialog(initial = '') {
   const st = { size: 16, threshold: 128, keep: 64, align: true, despeckle: true, bits: null, w: 0, h: 0, edited: false };
@@ -71,6 +72,21 @@ export function converterDialog(initial = '') {
   const d = modal({
     title: '向量→像素 轉換器', body, wide: true,
     buttons: [{ label: '取消', value: null }, {
+      label: '存入字典', onClick: async () => {
+        if (!st.bits || !st.bits.some((v) => v)) { toast('沒有可存的像素'); return false; }
+        if (st.size > MAX_W) { toast('字典字形寬度最多 16px，請選 16px 以下'); return false; }
+        let n = 0; const S = st.size;
+        for (let i = 0; i < cache.length; i++) {
+          const g = new Uint8Array(S * S);
+          for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) g[y * S + x] = st.bits[y * st.w + i * S + x];
+          if (!g.some((v) => v)) continue;
+          const rows = bitsToGlyphRows(g, S, S, S);
+          await saveGlyph({ ch: cache[i].ch, px: S, rows, adv: Math.max(inkWidth(rows) + 1, S >> 1), src: st.edited ? 'edit' : 'convert' }); n++;
+        }
+        toast(`已存入字典 ${n} 個字（${S}px）`); if (app.ui.tool === 'text') updateText();
+        return false;
+      },
+    }, {
       label: '放到畫布', class: 'primary', onClick: () => {
         if (!st.bits || !st.bits.some((v) => v)) { toast('沒有可放置的像素'); return false; }
         placeBits(st.bits, st.w, st.h); toast('已放置，可拖曳後點「✓ 放置」');
