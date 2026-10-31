@@ -608,7 +608,7 @@ export async function updateText() {
   if (seq !== textSeq) return null;
   let color = u.primary;
   if (u.paletteLock && color[3] > 0) color = nearestPaletteColor(color, app.doc.meta.palette);
-  const r = renderText(txt, { fontId: fid, lang: u.textLang || 'zh_tw', color, scale: u.textScale || 1, spacing: u.textSpacing || 0, lineGap: u.textLineGap ?? 2, align: u.textAlign || 'left', vertical: u.textVertical === 'v', effect: u.textEffect || 'none', effColor: u.secondary && u.secondary[3] ? u.secondary : [0, 0, 0, 255] });
+  const r = renderText(txt, { fontId: fid, lang: u.textLang || 'zh_tw', color, scale: u.textScale || 1, spacing: u.textSpacing || 0, lineGap: u.textLineGap ?? 2, align: u.textAlign || 'left', vertical: u.textVertical === 'v', italic: !!u.textItalic, effect: u.textEffect || 'none', effColor: u.secondary && u.secondary[3] ? u.secondary : [0, 0, 0, 255] });
   if (!r) return null;
   const cur = app.floating && app.floating.label === '文字' ? app.floating : null;
   const [ax, ay] = cur ? [cur.x, cur.y] : (u.textAt || [1, 1]);

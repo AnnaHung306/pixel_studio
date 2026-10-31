@@ -63,3 +63,14 @@ test('pixelfont: vertical text stacks glyphs, columns right→left (B67)', async
   assert.ok(colOn(v, 0, 12) > 0 && colOn(v, 0, 12) < colOn(v, 14, 26), 'second line (A) is the left column');
   assert.equal(renderText('', { vertical: true }), null);
 });
+
+test('shearItalic: bottom row fixed, top shifts right, width grows', async () => {
+  const { shearItalic } = await import('../../public/js/core/pixelfont.js');
+  const w = 3, h = 9, buf = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) buf[(y * w) * 4 + 3] = 255; // left column
+  const r = shearItalic({ buf, w, h }, 1);
+  assert.equal(r.w, w + 2);
+  const first = (y) => { for (let x = 0; x < r.w; x++) if (r.buf[(y * r.w + x) * 4 + 3]) return x; };
+  assert.equal(first(h - 1), 0);
+  assert.equal(first(0), 2);
+});

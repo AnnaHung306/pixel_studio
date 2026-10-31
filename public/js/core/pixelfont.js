@@ -65,9 +65,19 @@ export function glyphOf(dir, cp) {
   return { adv, rows, h: pg.h };
 }
 // Render text to an RGBA buffer. Pages must be loaded (await ensureText). Returns null for empty text.
-export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color = [0, 0, 0, 255], scale = 1, spacing = 0, lineGap = 2, align = 'left', effect = 'none', effColor = [0, 0, 0, 255], vertical = false } = {}) {
-  const r0 = vertical ? renderVertical(text, { fontId, lang, color, scale, spacing, lineGap }) : renderTextBase(text, { fontId, lang, color, scale, spacing, lineGap, align });
+export function renderText(text, { fontId = 'fusion12m', lang = 'zh_tw', color = [0, 0, 0, 255], scale = 1, spacing = 0, lineGap = 2, align = 'left', effect = 'none', effColor = [0, 0, 0, 255], vertical = false, italic = false } = {}) {
+  let r0 = vertical ? renderVertical(text, { fontId, lang, color, scale, spacing, lineGap }) : renderTextBase(text, { fontId, lang, color, scale, spacing, lineGap, align });
+  if (r0 && italic) r0 = shearItalic(r0, scale);
   return r0 && effect !== 'none' ? applyTextEffect(r0, effect, effColor, scale) : r0;
+}
+// Fake italic: shear right, 1 text-pixel per 4 rows (bottom stays put). Widens the bitmap.
+export function shearItalic(r, scale = 1) {
+  const rows = Math.round(r.h / scale), extra = Math.floor((rows - 1) / 4) * scale, W = r.w + extra, buf = new Uint8ClampedArray(W * r.h * 4);
+  for (let y = 0; y < r.h; y++) {
+    const sh = Math.floor((rows - 1 - Math.floor(y / scale)) / 4) * scale;
+    for (let x = 0; x < r.w; x++) { const o = (y * r.w + x) * 4, d = (y * W + x + sh) * 4; if (r.buf[o + 3]) { buf[d] = r.buf[o]; buf[d + 1] = r.buf[o + 1]; buf[d + 2] = r.buf[o + 2]; buf[d + 3] = r.buf[o + 3]; } }
+  }
+  return { buf, w: W, h: r.h };
 }
 // Outline (1 text-pixel ring, 8-neighbour) or drop shadow (+1,+1). Grows the bitmap by one text-pixel.
 export function applyTextEffect(r, effect, ec, scale = 1) {

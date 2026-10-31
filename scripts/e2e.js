@@ -1919,6 +1919,10 @@ async function runProfile(name, target, base) {
     await E(() => window.__pixelStudio.setUI({ textVertical: 'v' })); await type('Hi\n中文'); await settle(400);
     const dV = await cnt();
     ok(dV[1] === 26 && dV[2] === 24, 'vertical text: columns right-to-left (B67)', JSON.stringify(dV));
+    await E(() => window.__pixelStudio.setUI({ textVertical: 'h', textItalic: '1' })); await type('Hi\n中文'); await settle(400);
+    const dI = await cnt();
+    ok(dI[1] === 30 && dI[2] === 26, 'italic text shears and widens by 6px', JSON.stringify(dI));
+    await E(() => window.__pixelStudio.setUI({ textItalic: '' })); await type('Hi\n中文'); await settle(400);
     await E(() => window.__pixelStudio.setUI({ textVertical: 'h' })); await type('Hi\n中文'); await settle(400);
     await E(() => { const t = document.getElementById('textInput'); t.focus(); t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', ctrlKey: true, bubbles: true, cancelable: true })); });
     await settle(200);
