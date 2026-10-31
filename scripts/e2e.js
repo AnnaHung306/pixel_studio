@@ -2029,6 +2029,18 @@ async function runProfile(name, target, base) {
     ok(/已手修/.test(await info()), 'clicking a cell hand-edits');
     await set('convText', '永字'); await settle(300);
     ok(/32×16/.test(await info()), 'two chars side by side');
+    // B71: import a user TTF and render with it
+    const ttf = fs.readFileSync('/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf').toString('base64');
+    await set('convText', 'W'); await settle(200);
+    const inkA = +/(\d+) 點/.exec(await info())[1];
+    await E(async (b64) => { const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); const dt = new DataTransfer(); dt.items.add(new File([u], 'test.ttf', { type: 'font/ttf' })); const el = document.getElementById('convFontFile'); el.files = dt.files; el.dispatchEvent(new Event('change', { bubbles: true })); }, ttf);
+    for (let i = 0; i < 30 && !/test\.ttf/.test(await E(() => document.getElementById('convFontInfo').textContent)); i++) await settle(100);
+    ok(/test\.ttf/.test(await E(() => document.getElementById('convFontInfo').textContent)), 'user TTF imported');
+    const inkB = +/(\d+) 點/.exec(await info())[1];
+    ok(inkB > 10 && inkB !== inkA, 'imported font changes the converted glyph', inkA + '→' + inkB);
+    await E(() => document.getElementById('convFontReset').click()); await settle(200);
+    ok(/系統預設/.test(await E(() => document.getElementById('convFontInfo').textContent)), 'reset to system font');
+    await set('convText', '永字'); await settle(300);
     await E(() => [...document.querySelectorAll('.modal footer button')].find((b) => b.textContent === '放到畫布').click());
     await settle(300);
     const f = await E(() => { const f = window.__pixelStudio.app.floating; if (!f) return null; let n = 0; for (let i = 3; i < f.buf.length; i += 4) if (f.buf[i]) n++; let b = -1; for (let i = 3; i < f.buf.length; i += 4) if (f.buf[i]) { b = f.buf[i - 1]; break; } return [f.w, f.h, n, b]; });

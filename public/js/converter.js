@@ -6,7 +6,7 @@ import { placeBits, updateText } from './tools.js';
 import { saveGlyph, bitsToGlyphRows, inkWidth, MAX_W } from './core/glyphdict.js';
 
 export function converterDialog(initial = '') {
-  const st = { size: 16, threshold: 128, keep: 64, align: true, despeckle: true, bits: null, w: 0, h: 0, edited: false };
+  const st = { size: 16, threshold: 128, keep: 64, family: undefined, align: true, despeckle: true, bits: null, w: 0, h: 0, edited: false };
   const txt = h('input', { type: 'text', id: 'convText', value: initial || app.ui.textValue || '字', 'aria-label': '要轉換的文字', placeholder: '輸入要轉換的字' });
   const cv = h('canvas', { id: 'convPreview', style: { imageRendering: 'pixelated', border: '1px solid #666', maxWidth: '100%', background: '#fff', touchAction: 'none' } });
   const info = h('div', { class: 'small', id: 'convInfo' });
@@ -15,7 +15,7 @@ export function converterDialog(initial = '') {
     const chars = [...txt.value].filter((c) => !/\s/.test(c)).slice(0, 12);
     const S = st.size;
     cache = chars.map((ch) => {
-      const rd = canvasRender(ch, S);
+      const rd = canvasRender(ch, S, st.family ? { family: st.family } : {});
       const r = convertGlyph(rd, S, S, { align: st.align, threshold: st.threshold, keep: st.keep, despeckle: st.despeckle });
       return { ch, a: rd(r.dx, r.dy) };
     });
@@ -59,10 +59,22 @@ export function converterDialog(initial = '') {
   const size = h('select', { id: 'convSize', 'aria-label': '目標像素大小', onchange: () => { st.size = +size.value; redo(); } }, [8, 10, 12, 14, 16, 20, 24, 32].map((n) => h('option', { value: n, selected: n === st.size }, n + 'px')));
   const align = h('input', { type: 'checkbox', id: 'convAlign', checked: true, onchange: () => { st.align = align.checked; redo(); } });
   const desp = h('input', { type: 'checkbox', id: 'convDesp', checked: true, onchange: () => { st.despeckle = desp.checked; rebin(); } });
+  const fontInfo = h('div', { class: 'small', id: 'convFontInfo' }, '字型：系統預設');
+  const fontFile = h('input', { type: 'file', id: 'convFontFile', accept: '.ttf,.otf,.woff,.woff2,font/ttf,font/otf', 'aria-label': '匯入字型檔', onchange: async () => {
+    const f = fontFile.files && fontFile.files[0]; if (!f) return;
+    try {
+      const name = 'UserFont' + Date.now();
+      const face = new FontFace(name, await f.arrayBuffer());
+      await face.load(); document.fonts.add(face);
+      st.family = `"${name}"`; fontInfo.textContent = '字型：' + f.name + '（僅本次使用，請確認有使用授權）'; redo();
+    } catch (e) { toast('無法讀取這個字型檔'); }
+  } });
+  const fontReset = h('button', { type: 'button', class: 'btn', id: 'convFontReset', onclick: () => { st.family = undefined; fontInfo.textContent = '字型：系統預設'; fontFile.value = ''; redo(); } }, '改回系統字型');
   txt.addEventListener('input', redo);
   const body = h('div', {},
     h('div', { class: 'small' }, '用系統向量字型在目標大小渲染，再轉成乾淨 1-bit 點陣（自動找最清楚的對齊、保留細筆畫、去孤點）。'),
     h('label', { class: 'field' }, h('span', {}, '文字'), txt),
+    h('label', { class: 'field' }, h('span', {}, '匯入字型 (TTF/OTF)'), fontFile), fontInfo, fontReset,
     h('label', { class: 'field' }, h('span', {}, '像素大小'), size),
     slider('convThr', '門檻', 'threshold', 40, 220, 1, rebin),
     slider('convKeep', '細筆畫保留', 'keep', 0, 120, 1, rebin),
