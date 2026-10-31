@@ -3,7 +3,7 @@ import { app, on, emit, setUI, commit, undo, redo, jumpHistory, activeLayer, lay
 import { h, popupMenu, prompt, modal, pickFile, readAs, download, slider, confirmBox, capture, claimPencil } from './dom.js';
 import { converterDialog } from './converter.js';
 import { dictionaryDialog } from './dictionary.js';
-import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, customBrushFromSelection, dropFloating, cancelFloating, updateText } from './tools.js';
+import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelection, pasteClip, deleteSelection, transformSelection, transformSelectionAllFrames, customBrushFromSelection, dropFloating, cancelFloating, updateText } from './tools.js';
 import { LANGS, SIZES, STYLES } from './core/pixelfont.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
@@ -141,6 +141,7 @@ function selectionButtons() {
     b('複製', copySelection, 'Ctrl+C'), b('剪下', cutSelection, 'Ctrl+X'), b('貼上', () => pasteClip(), 'Ctrl+V'), b('刪除', () => deleteSelection(), 'Delete'),
     b('⇆ 翻轉', () => transformSelection('flipH'), '水平翻轉 (Shift+H)'), b('⇅ 翻轉', () => transformSelection('flipV'), '垂直翻轉 (Shift+V)'),
     b('↻ 90°', () => transformSelection('rotCW')), b('↺ 90°', () => transformSelection('rotCCW')),
+    b('⇆ 全影格', () => transformSelectionAllFrames('flipH'), '水平翻轉：套用到此圖層所有影格'), b('⇅ 全影格', () => transformSelectionAllFrames('flipV'), '垂直翻轉：套用到此圖層所有影格'),
     b('裁切畫布', A.cropToSelection, '裁切到選取範圍'),
     b('設為筆刷', () => { const cb = customBrushFromSelection(app.selection); if (!app.selection) return toast('請先建立選取範圍'); if (!cb) return toast('選取範圍為空或超過 64×64'); setUI({ customBrush: cb, brushShape: 'custom', tool: 'pencil' }); toast('已建立自訂筆刷（◆）'); }, '把選取範圍的形狀設為筆刷（用目前顏色蓋印）'),
   ];

@@ -522,6 +522,48 @@ export function transformSelection(kind) {
   refreshFloating();
 }
 
+// B70: flip/rotate the selection's contents on every frame of the active layer in one undo step.
+export function transformSelectionAllFrames(kind) {
+  if (!editable()) return;
+  if (app.floating) dropFloating();
+  const sel = app.selection;
+  if (!sel) { toast('請先建立選取範圍'); return; }
+  const { x, y, w, h, mask } = sel, Wd = W();
+  if ((kind === 'rotCW' || kind === 'rotCCW') && w !== h) { toast('旋轉所有影格需要正方形選取範圍'); return; }
+  const L = activeLayer();
+  const m4 = new Uint8ClampedArray(w * h * 4);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (mask[(y + j) * Wd + x + i]) m4[(j * w + i) * 4 + 3] = 255;
+  const tr = (b) => kind === 'flipH' || kind === 'flipV' ? flipBuffer(b, w, h, kind === 'flipH') : rotateBuffer(b, w, h, kind === 'rotCW').buf;
+  const mm = tr(m4);
+  const jobs = [];
+  for (const f of app.doc.meta.frames) {
+    const k = celKey(L.id, f.id), cel = app.doc.cels.get(k);
+    if (!cel) continue;
+    const out = cel.slice(), src = new Uint8ClampedArray(w * h * 4);
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const p = (y + j) * Wd + x + i;
+      if (!mask[p]) continue;
+      src.set(cel.subarray(p * 4, p * 4 + 4), (j * w + i) * 4);
+      out[p * 4] = out[p * 4 + 1] = out[p * 4 + 2] = out[p * 4 + 3] = 0;
+    }
+    const t = tr(src);
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const q = (j * w + i) * 4;
+      if (!mm[q + 3]) continue;
+      const p = (y + j) * Wd + x + i;
+      if (t[q + 3]) out.set(t.subarray(q, q + 4), p * 4);
+    }
+    jobs.push([k, out]);
+  }
+  if (!jobs.length) return;
+  commit('所有影格' + { flipH: '水平翻轉', flipV: '垂直翻轉', rotCW: '順時針旋轉', rotCCW: '逆時針旋轉' }[kind], () => { for (const [k, o] of jobs) setCel(k, o); });
+  const nm = new Uint8Array(Wd * H());
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) if (mm[(j * w + i) * 4 + 3]) nm[(y + j) * Wd + x + i] = 1;
+  app.selection = { mask: nm, x, y, w, h };
+  emit('selection');
+  toast('已套用到 ' + jobs.length + ' 個影格');
+}
+
 export function copySelection() {
   const f = app.floating;
   let clip;
