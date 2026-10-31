@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1765,6 +1765,20 @@ async function runProfile(name, target, base) {
     const d = await E(() => window.__e2e.cel(4, 3));
     ok(d[0] === 184 && d[1] === 104 && d[2] === 24, 'saturation -20%', JSON.stringify(d));
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 0, 'transparent stays transparent');
+  };
+  S.sharpen = async () => {
+    await newProject(16, 16, 'sh');
+    await setPrimary([100, 100, 100, 255]);
+    await E(() => window.__e2e.stroke([[3, 3], [5, 3]], 'pen'));
+    await setPrimary([200, 200, 200, 255]);
+    await E(() => window.__e2e.stroke([[6, 3]], 'pen'));
+    await menu('銳利化');
+    const a = await E(() => window.__e2e.cel(5, 3));
+    const b = await E(() => window.__e2e.cel(6, 3));
+    ok(a[0] < 100 && b[0] > 200 && a[3] === 255, 'sharpen increases edge contrast', JSON.stringify([a, b]));
+    ok((await E(() => window.__e2e.cel(10, 10)))[3] === 0, 'transparent stays transparent');
+    await E(() => window.__pixelStudio.undo());
+    ok((await E(() => window.__e2e.cel(5, 3)))[0] === 100, 'undo restores');
   };
   S.colorrevert = async () => {
     await newProject(16, 16, 'cr');

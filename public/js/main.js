@@ -333,6 +333,7 @@ function mainMenu(anchor) {
     { label: '降低對比 20%（所有圖層）', action: () => A.adjustContrast(-20) },
     { label: '增加飽和度 20%（所有圖層）', action: () => A.adjustSaturation(20) },
     { label: '降低飽和度 20%（所有圖層）', action: () => A.adjustSaturation(-20) },
+    { label: '銳利化（所有圖層）', action: () => A.sharpenColors(0.5) },
     { label: '加外框（主色，目前 cel）', action: () => A.addOutline() },
     { label: '加外框（含斜角 8 鄰接）', action: () => A.addOutline({ diag: true }) },
     { label: '加內框（邊緣像素改主色）', action: () => A.addOutline({ mode: 'inner' }) },

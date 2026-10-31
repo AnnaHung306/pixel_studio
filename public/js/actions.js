@@ -336,6 +336,37 @@ export function adjustSaturation(pct = 20) {
   return mapColors(nm, (r, g, b) => { const y = 0.299 * r + 0.587 * g + 0.114 * b; return [cl(y + (r - y) * k), cl(y + (g - y) * k), cl(y + (b - y) * k)]; }, (n) => `已${nm} ${Math.abs(pct)}%（${n} 個像素）`, '沒有可調整的像素');
 }
 
+// Sharpen all cels (iter 68, B72): unsharp via 4-neighbour Laplacian over opaque neighbours; amount 0..1.
+export function sharpenColors(amount = 0.5) {
+  dropFloating();
+  const w = W(), h = H(), a = Math.max(0, Math.min(1, amount));
+  const cl = (v) => Math.max(0, Math.min(255, Math.round(v)));
+  let changed = 0;
+  commit('銳利化', () => {
+    for (const [k, src] of app.doc.cels) {
+      const nb = src.slice();
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4;
+        if (src[i + 3] === 0) continue;
+        let n = 0; const sum = [0, 0, 0];
+        for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+          const xx = x + dx, yy = y + dy;
+          if (xx < 0 || xx >= w || yy < 0 || yy >= h) continue;
+          const j = (yy * w + xx) * 4;
+          if (src[j + 3] === 0) continue;
+          n++; sum[0] += src[j]; sum[1] += src[j + 1]; sum[2] += src[j + 2];
+        }
+        if (!n) continue;
+        const o = [0, 1, 2].map((c) => cl(src[i + c] + a * (src[i + c] - sum[c] / n)));
+        if (o[0] !== src[i] || o[1] !== src[i + 1] || o[2] !== src[i + 2]) { nb[i] = o[0]; nb[i + 1] = o[1]; nb[i + 2] = o[2]; changed++; }
+      }
+      app.doc.cels.set(k, nb);
+    }
+  });
+  toast(changed ? `已銳利化 ${changed} 個像素` : '沒有可銳利化的像素');
+  return changed;
+}
+
 // Lighten/darken all cels by pct percent (iter 38): positive blends toward white, negative toward black.
 export function adjustBrightness(pct = 15) {
   const t = Math.max(-100, Math.min(100, pct)) / 100;
