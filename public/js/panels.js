@@ -142,6 +142,7 @@ function selectionButtons() {
     b('⇆ 翻轉', () => transformSelection('flipH'), '水平翻轉 (Shift+H)'), b('⇅ 翻轉', () => transformSelection('flipV'), '垂直翻轉 (Shift+V)'),
     b('↻ 90°', () => transformSelection('rotCW')), b('↺ 90°', () => transformSelection('rotCCW')),
     b('⇆ 全影格', () => transformSelectionAllFrames('flipH'), '水平翻轉：套用到此圖層所有影格'), b('⇅ 全影格', () => transformSelectionAllFrames('flipV'), '垂直翻轉：套用到此圖層所有影格'),
+    b('↻ 全影格', () => transformSelectionAllFrames('rotCW'), '順時針旋轉90°：套用到所有影格（需正方形選取）'), b('↺ 全影格', () => transformSelectionAllFrames('rotCCW'), '逆時針旋轉90°：套用到所有影格（需正方形選取）'),
     b('裁切畫布', A.cropToSelection, '裁切到選取範圍'),
     b('設為筆刷', () => { const cb = customBrushFromSelection(app.selection); if (!app.selection) return toast('請先建立選取範圍'); if (!cb) return toast('選取範圍為空或超過 64×64'); setUI({ customBrush: cb, brushShape: 'custom', tool: 'pencil' }); toast('已建立自訂筆刷（◆）'); }, '把選取範圍的形狀設為筆刷（用目前顏色蓋印）'),
   ];
