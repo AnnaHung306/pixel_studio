@@ -103,9 +103,10 @@ export function exportDialog() {
   const cols = h('input', { type: 'number', min: 1, max: 256, value: 8 });
   const pad = h('input', { type: 'number', min: 0, max: 64, value: 0, 'aria-label': '精靈圖影格間距（像素）' });
   const zip = h('input', { type: 'checkbox' });
+  const pow2 = h('input', { type: 'checkbox', 'aria-label': '精靈圖尺寸補成 2 的次方' });
   const rowRange = h('div', { class: 'row' }, h('label', {}, '範圍'), range);
   const rowLoop = h('div', { class: 'row' }, h('label', {}, '循環'), loop);
-  const rowSheet = h('div', { class: 'row' }, h('label', {}, '排列'), layout, h('label', {}, '欄數'), cols, h('label', {}, '間距'), pad, h('label', {}, zip, ' 打包 ZIP'));
+  const rowSheet = h('div', { class: 'row' }, h('label', {}, '排列'), layout, h('label', {}, '欄數'), cols, h('label', {}, '間距'), pad, h('label', {}, zip, ' 打包 ZIP'), h('label', {}, pow2, ' 2 的次方尺寸'));
   const rowScale = h('div', { class: 'row' }, h('label', {}, '放大'), scale, sv);
   const upd = () => {
     const f = fmt.value;
@@ -125,7 +126,7 @@ export function exportDialog() {
         try {
           if (fmt.value === 'png') await io.exportPNG(s);
           else if (fmt.value === 'zip') await io.exportFramesZip(s, idx);
-          else if (fmt.value === 'sheet') await io.exportSheet(s, idx, { layout: layout.value, columns: +cols.value, zip: zip.checked, pad: +pad.value || 0 });
+          else if (fmt.value === 'sheet') await io.exportSheet(s, idx, { layout: layout.value, columns: +cols.value, zip: zip.checked, pad: +pad.value || 0, pow2: pow2.checked });
           else if (fmt.value === 'gif') await io.exportGIF(s, idx, loop.value);
           else if (fmt.value === 'apng') await io.exportAPNG(s, idx, loop.value);
           else io.exportPxs();

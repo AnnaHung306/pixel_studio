@@ -58,10 +58,10 @@ export async function exportFramesZip(scale, idxs) {
   download(makeZip(files), `${safeName()}-frames.zip`);
 }
 
-export async function exportSheet(scale, idxs, { layout = 'horizontal', columns = 8, zip = false, pad = 0 } = {}) {
+export async function exportSheet(scale, idxs, { layout = 'horizontal', columns = 8, zip = false, pad = 0, pow2 = false } = {}) {
   dropFloating();
   const n = idxs.length, w = W(), h = H();
-  const geo = sheetGeometry(n, w, h, layout, columns, pad);
+  const geo = sheetGeometry(n, w, h, layout, columns, pad, pow2);
   const SW = geo.width, SH = geo.height;
   scale = guardScale(scale, SW, SH);
   const sheet = createBuffer(SW, SH);

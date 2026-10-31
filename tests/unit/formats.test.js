@@ -58,3 +58,10 @@ test('sheetGeometry: padding surrounds and separates frames', () => {
   assert.deepEqual(g.cells.map((c) => c.x), [2, 20, 38]);
   assert.equal(sheetGeometry(2, 4, 4, 'grid', 0, 999).pad, 64);
 });
+
+test('sheetGeometry: pow2 rounds canvas up to powers of two', () => {
+  const g = sheetGeometry(5, 10, 10, 'horizontal', 8, 0, true);
+  assert.equal(g.width, 64); assert.equal(g.height, 16);
+  assert.equal(sheetGeometry(4, 16, 16, 'horizontal', 8, 0, true).width, 64);
+  assert.equal(sheetGeometry(3, 10, 10, 'horizontal').width, 30);
+});
