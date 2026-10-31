@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1555,6 +1555,16 @@ async function runProfile(name, target, base) {
     await menu('關閉無縫拼貼預覽');
     await settle(100);
     ok(await E(() => window.__e2e.cel(0, 0)[3]) === 255, 'menu toggles tile preview on/off; drawing intact');
+  };
+  S.graypv = async () => {
+    await newProject(8, 8, 'graypv');
+    await menu('灰階預覽');
+    await settle(150);
+    ok(await E(() => document.getElementById('view').classList.contains('gray-preview') && getComputedStyle(document.getElementById('view')).filter.includes('grayscale')), 'gray preview on');
+    await layoutOk('gray preview');
+    await menu('關閉灰階預覽');
+    await settle(100);
+    ok(await E(() => !document.getElementById('view').classList.contains('gray-preview')), 'gray preview off');
   };
   S.pressure = async () => {
     await newProject(32, 32, 'pressure');

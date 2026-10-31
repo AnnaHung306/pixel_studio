@@ -16,7 +16,7 @@ export const app = {
     primary: [0, 0, 0, 255], secondary: [255, 255, 255, 255], activeSlot: 'primary',
     brushSize: 1, pressure: false, pressureMin: 0, brushShape: 'square', pixelPerfect: false, dither: '', shadeInk: '', paletteLock: false, fillContiguous: true, fillGradient: false, gradRadial: false, gradHard: false, gradDither: 4, shapeFilled: false,
     linkMove: false, wrapMove: false, symX: false, symY: false, longPressMs: 600, tapGestures: true, sampleLayer: false,
-    zoom: 8, panX: 0, panY: 0, showGrid: true, tilePreview: false,
+    zoom: 8, panX: 0, panY: 0, showGrid: true, tilePreview: false, grayPreview: false,
     customGrid: { on: false, w: 8, h: 8, color: '#5b8cff' },
     onion: { on: false, prev: 1, next: 1, opacity: 0.4, tint: true, prevColor: '#ff3030', nextColor: '#3080ff' },
     refsAbove: true, penOnly: false, leftHand: false, playing: false, loopMode: 'loop', playTag: '', speed: 1,
