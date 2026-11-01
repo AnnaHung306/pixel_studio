@@ -2,7 +2,7 @@
 import { app, commit, emit, setUI, activeLayer, activeKey, layerIndex, W, H, toast, uid, celKey } from './state.js';
 import { dropFloating, setCel } from './tools.js';
 import { nearestPaletteColor } from './core/palettes.js';
-import { reframe, compositeLayers, blendInto, createBuffer, rgbaToHex } from './core/raster.js';
+import { reframe, contentBBox, tweenCel, compositeLayers, blendInto, createBuffer, rgbaToHex } from './core/raster.js';
 
 export function selectFrame(i) {
   dropFloating();
@@ -411,4 +411,24 @@ export function addOutline(opts = {}) {
   commit(inner ? '加內框' : '加外框', () => { setCel(key, nb); });
   toast(`已加${inner ? '內' : '外'}框 ${added} 個像素`);
   return added;
+}
+
+// B76: fill empty frames between the active cel and the next non-empty cel of this layer with moved (optionally fading) copies.
+export function tweenToNext(fade = 'none') {
+  dropFloating();
+  const m = app.doc.meta, lid = activeLayer().id, w = W(), h = H(), from = app.ui.frame;
+  const src = app.doc.cels.get(celKey(lid, m.frames[from].id));
+  const sb = src && contentBBox(src, w, h);
+  if (!sb) { toast('這個影格的圖層是空的'); return 0; }
+  let to = -1;
+  for (let i = from + 1; i < m.frames.length; i++) { const b = app.doc.cels.get(celKey(lid, m.frames[i].id)); if (b && contentBBox(b, w, h)) { to = i; break; } }
+  if (to < 0 && fade === 'none') { toast('後面沒有可補間的影格'); return 0; }
+  const eb = to < 0 ? sb : contentBBox(app.doc.cels.get(celKey(lid, m.frames[to].id)), w, h);
+  if (to < 0) to = m.frames.length;
+  if (to - from < 2) { toast('兩格之間沒有空影格可補間'); return 0; }
+  commit('補間', () => {
+    for (let i = from + 1; i < to; i++) setCel(celKey(lid, m.frames[i].id), tweenCel(src, w, h, sb, eb, (i - from) / (to - from), fade));
+  });
+  toast(`已補間 ${to - from - 1} 格`);
+  return to - from - 1;
 }

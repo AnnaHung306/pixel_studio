@@ -337,6 +337,8 @@ function mainMenu(anchor) {
     { label: '加外框（主色，目前 cel）', action: () => A.addOutline() },
     { label: '加外框（含斜角 8 鄰接）', action: () => A.addOutline({ diag: true }) },
     { label: '加內框（邊緣像素改主色）', action: () => A.addOutline({ mode: 'inner' }) },
+    { label: '補間：移動到下一個有內容的影格（目前圖層）', action: () => A.tweenToNext() },
+    { label: '補間：淡出到結尾（目前圖層）', action: () => A.tweenToNext('out') },
     { label: '順時針旋轉 90°', action: () => T.transformSelection('rotCW') },
     '-',
     { header: '檢視' },

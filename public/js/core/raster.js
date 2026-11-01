@@ -401,3 +401,30 @@ export function limitScale(scale, w, h, maxPixels = MAX_EXPORT_PIXELS) {
   while (scale > 1 && w * scale * h * scale > maxPixels) scale--;
   return scale;
 }
+
+// ---- tween (B76): bounding box of non-transparent pixels, and in-between cel ----
+export function contentBBox(buf, w, h) {
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    if (buf[(y * w + x) * 4 + 3] === 0) continue;
+    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+  }
+  return x1 < 0 ? null : { x0, y0, x1, y1 };
+}
+// t in [0,1]. Shifts `src` by round(t * (endBBox - startBBox)); fade: 'none'|'out'|'in' scales alpha.
+export function tweenCel(src, w, h, startBox, endBox, t, fade = 'none') {
+  const dx = Math.round(t * (endBox.x0 - startBox.x0)), dy = Math.round(t * (endBox.y0 - startBox.y0));
+  const out = createBuffer(w, h);
+  const k = fade === 'out' ? 1 - t : fade === 'in' ? t : 1;
+  for (let y = 0; y < h; y++) {
+    const ty = y + dy; if (ty < 0 || ty >= h) continue;
+    for (let x = 0; x < w; x++) {
+      const tx = x + dx; if (tx < 0 || tx >= w) continue;
+      const si = (y * w + x) * 4, di = (ty * w + tx) * 4;
+      if (!src[si + 3]) continue;
+      out[di] = src[si]; out[di + 1] = src[si + 1]; out[di + 2] = src[si + 2];
+      out[di + 3] = Math.round(src[si + 3] * k);
+    }
+  }
+  return out;
+}
