@@ -602,6 +602,25 @@ export function pasteClip(clip = app.clipboard, at = null) {
   refreshFloating();
   toast('已貼上，拖曳移動，按 Enter 或「完成」確定');
 }
+export function pasteClipToFrames(clip = app.clipboard) {
+  if (!clip) { toast('剪貼簿是空的'); return; }
+  if (!editable()) return;
+  dropFloating();
+  const fr = app.doc.meta.frames;
+  const [a, b] = app.ui.frameSel || [app.ui.frame, app.ui.frame];
+  const L = activeLayer(), Wd = W(), Ht = H();
+  const x = Math.max(0, Math.min(clip.x ?? 0, Wd - 1)), y = Math.max(0, Math.min(clip.y ?? 0, Ht - 1));
+  const jobs = [];
+  for (let i = a; i <= b && i < fr.length; i++) {
+    const k = celKey(L.id, fr[i].id);
+    const out = (app.doc.cels.get(k) || createBuffer(Wd, Ht)).slice();
+    pasteOver(out, Wd, Ht, clip.buf, clip.w, clip.h, x, y);
+    jobs.push([k, out]);
+  }
+  if (!jobs.length) return;
+  commit('貼到 ' + jobs.length + ' 個影格', () => { for (const [k, o] of jobs) setCel(k, o); });
+  toast('已貼到 ' + jobs.length + ' 個影格');
+}
 export function deleteSelection(label = '刪除選取內容') {
   if (!editable()) return;
   const f = app.floating;

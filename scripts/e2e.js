@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen', 'allframes', 'allframesrot'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen', 'allframes', 'allframesrot', 'pasteframes'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1794,6 +1794,23 @@ async function runProfile(name, target, base) {
     for (const f of [0, 1, 2]) ok((await cel(14, 1, 0, f)).join() === '255,0,0,255' && (await cel(13, 1, 0, f)).join() === '255,0,0,255' && (await cel(1, 1, 0, f))[3] === 0, 'frame ' + f + ' flipped', JSON.stringify(await cel(14, 1, 0, f)));
     await E(() => window.__pixelStudio.undo());
     for (const f of [0, 1, 2]) ok((await cel(1, 1, 0, f)).join() === '255,0,0,255', 'undo restores frame ' + f);
+  };
+  S.pasteframes = async () => {
+    await newProject(16, 16, 'pf');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false }));
+    await tool('pencil');
+    await setPrimary([0, 255, 0, 255]);
+    await stroke([[2, 2], [3, 2]]);
+    for (let i = 0; i < 3; i++) await E(() => window.__pixelStudio.A.addFrame(true));
+    await E(() => { const { T, app } = window.__pixelStudio; app.ui.frame = 0; app.ui.frameSel = null; });
+    await E(() => { const { T } = window.__pixelStudio; T.selectAll(); T.copySelection(); T.deselect(); });
+    await E(() => { const { app } = window.__pixelStudio; app.ui.frame = 0; });
+    const before = [];
+    for (const f of [1, 2, 3]) before.push((await cel(2, 2, 0, f)).join());
+    await E(() => { const { T, app } = window.__pixelStudio; app.ui.frameSel = [1, 3]; T.pasteClipToFrames(); });
+    for (const f of [1, 2, 3]) ok((await cel(2, 2, 0, f)).join() === '0,255,0,255', 'pasted frame ' + f);
+    await E(() => window.__pixelStudio.undo());
+    for (const f of [1, 2, 3]) ok((await cel(2, 2, 0, f)).join() === before[f - 1], 'undo restores frame ' + f);
   };
   S.allframesrot = async () => {
     await newProject(16, 16, 'afr');
