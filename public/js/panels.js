@@ -498,6 +498,8 @@ function tagDialog(tag) {
   const dir = h('select', {}, ['forward', 'reverse', 'pingpong'].map((d) => h('option', { value: d, selected: t.direction === d }, dirLabel(d))));
   const color = h('input', { type: 'color', value: (t.color || '#5b6ee1').slice(0, 7) });
   const buttons = [{ label: '取消', value: null }];
+  const tot = tag ? m.frames.slice(tag.from, tag.to + 1).reduce((a, f) => a + f.duration, 0) : 0;
+  const total = h('input', { type: 'number', min: 10, step: 10, value: tot, 'data-testid': 'tag-total' });
   if (tag) {
     buttons.unshift({ label: '刪除', class: 'danger', onClick: () => A.deleteTag(tag.id) });
     buttons.splice(1, 0, { label: app.ui.playTag === tag.id ? '取消播放範圍' : '設為播放範圍', onClick: () => { setUI({ playTag: app.ui.playTag === tag.id ? '' : tag.id }); renderTimeline(); } });
@@ -505,12 +507,14 @@ function tagDialog(tag) {
   buttons.push({ label: '儲存', class: 'primary', onClick: () => {
     const a = Math.max(1, Math.min(m.frames.length, +from.value)) - 1, b = Math.max(1, Math.min(m.frames.length, +to.value)) - 1;
     A.saveTag({ ...(tag ? { id: tag.id } : {}), name: name.value.trim() || '標籤', from: Math.min(a, b), to: Math.max(a, b), direction: dir.value, color: color.value });
+    if (tag && +total.value > 0 && +total.value !== tot) A.scaleTagDuration(tag.id, +total.value);
   } });
   modal({
     title: tag ? '編輯標籤' : '新增標籤',
     body: h('div', {}, h('label', { class: 'field' }, h('span', {}, '名稱（例如 idle、walk、attack）'), name),
       h('div', { class: 'row' }, h('label', {}, '從影格'), from, h('label', {}, '到'), to),
-      h('div', { class: 'row' }, h('label', {}, '方向'), dir, h('label', {}, '顏色'), color)),
+      h('div', { class: 'row' }, h('label', {}, '方向'), dir, h('label', {}, '顏色'), color),
+      tag ? h('div', { class: 'row' }, h('label', {}, '總時長(ms，影格按比例縮放)'), total) : null),
     buttons,
   });
 }

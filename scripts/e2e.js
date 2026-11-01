@@ -988,6 +988,7 @@ async function runProfile(name, target, base) {
     await setPrimary([0, 255, 0, 255]);
     await stroke([[5, 5], [5, 5]]);
     await E(() => { const { A } = window.__pixelStudio; A.setFrameDuration([0], 120); A.setFrameDuration([1], 200); A.saveTag({ name: 'idle', from: 0, to: 1, direction: 'forward', color: '#5b6ee1' }); });
+    { const r = await E(() => { const { A, app } = window.__pixelStudio; const id = app.doc.meta.tags.at(-1).id; const d = () => app.doc.meta.frames.slice(0, 2).map((f) => f.duration).join(); A.scaleTagDuration(id, 640); const x = d(); A.scaleTagDuration(id, 320); return x + '|' + d(); }); if (r !== '240,400|120,200') throw new Error('scaleTagDuration ' + r); }
     const exportVia = async (fmt, opts = {}) => waitDownloads(opts.n || 1, async () => {
       await menu('匯出（PNG');
       await page.locator('#modal-root .modal select').first().selectOption(fmt);

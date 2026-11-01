@@ -142,6 +142,15 @@ export function saveTag(tag) {
     else tags.push({ ...tag, id: uid('T') });
   });
 }
+export function scaleTagDuration(id, totalMs) {
+  const m = app.doc.meta, t = m.tags.find((x) => x.id === id);
+  if (!t || !(totalMs > 0)) return;
+  const fr = m.frames.slice(t.from, t.to + 1);
+  const cur = fr.reduce((a, f) => a + f.duration, 0);
+  if (!cur) return;
+  const k = totalMs / cur;
+  commit('縮放標籤時長', () => { for (const f of fr) f.duration = Math.max(10, Math.round(f.duration * k)); });
+}
 export function deleteTag(id) {
   commit('刪除標籤', () => { app.doc.meta.tags = app.doc.meta.tags.filter((t) => t.id !== id); });
 }
