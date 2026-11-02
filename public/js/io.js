@@ -2,7 +2,7 @@
 import { app, W, H, commit, uid, celKey, toast } from './state.js';
 import { compositeAll } from './actions.js';
 import { scaleNearest, createBuffer, reframe, isEmpty, limitScale } from './core/raster.js';
-import { encodeGIF, encodeAPNG, encodePNG, makeZip, decodeGIF, sheetGeometry } from './formats.js';
+import { encodeGIF, encodeAPNG, encodeAseprite, encodePNG, makeZip, decodeGIF, sheetGeometry } from './formats.js';
 import { download, readAs, isIOS } from './dom.js';
 import { docToJSON, docFromJSON } from './storage.js';
 import { dictGlyphsForPxs, importDict } from './core/glyphdict.js';
@@ -114,6 +114,11 @@ export async function exportAPNG(scale, idxs, loopMode = 'loop') {
   const seq = animSequence(idxs, loopMode);
   const frames = seq.map((fi) => ({ buf: scaleNearest(compositeAll(fi), W(), H(), scale), duration: app.doc.meta.frames[fi].duration }));
   download(await encodeAPNG(frames, W() * scale, H() * scale, loopMode === 'once' ? 1 : 0), `${safeName()}${scale > 1 ? '@' + scale + 'x' : ''}.apng.png`);
+}
+export async function exportAseprite() {
+  dropFloating();
+  const m = app.doc.meta;
+  download(await encodeAseprite(m, (li, fi) => app.doc.cels.get(celKey(m.layers[li].id, m.frames[fi].id)) || null), `${safeName()}.aseprite`);
 }
 export function exportPxs() {
   dropFloating();

@@ -92,7 +92,7 @@ export function canvasSizeDialog() {
 // ---------- export ----------
 export function exportDialog() {
   const fmt = h('select', {},
-    [['png', 'PNG — 目前影格'], ['zip', 'PNG — 所有影格（ZIP）'], ['sheet', '精靈圖 PNG + JSON（Aseprite 相容格式）'], ['gif', 'GIF 動畫（保留透明）'], ['apng', 'APNG 動畫（完整透明度）'], ['pxs', 'Pixel Studio 專案檔 .pxs']].map(([v, l]) => h('option', { value: v }, l)));
+    [['png', 'PNG — 目前影格'], ['zip', 'PNG — 所有影格（ZIP）'], ['sheet', '精靈圖 PNG + JSON（Aseprite 相容格式）'], ['gif', 'GIF 動畫（保留透明）'], ['apng', 'APNG 動畫（完整透明度）'], ['aseprite', 'Aseprite 檔 .aseprite（保留圖層／影格／標籤）'], ['pxs', 'Pixel Studio 專案檔 .pxs']].map(([v, l]) => h('option', { value: v }, l)));
   const scale = h('input', { type: 'range', min: 1, max: 20, value: Math.max(1, Math.min(20, Math.floor(256 / Math.max(W(), H()))) || 1) });
   const sv = h('span', {}, '');
   const updS = () => (sv.textContent = `×${scale.value}（${W() * scale.value}×${H() * scale.value}）`);
@@ -113,7 +113,7 @@ export function exportDialog() {
     rowRange.style.display = ['zip', 'sheet', 'gif', 'apng'].includes(f) ? '' : 'none';
     rowLoop.style.display = ['gif', 'apng'].includes(f) ? '' : 'none';
     rowSheet.style.display = f === 'sheet' ? '' : 'none';
-    rowScale.style.display = f === 'pxs' ? 'none' : '';
+    rowScale.style.display = (f === 'pxs' || f === 'aseprite') ? 'none' : '';
   };
   fmt.onchange = upd; upd();
   modal({
@@ -129,6 +129,7 @@ export function exportDialog() {
           else if (fmt.value === 'sheet') await io.exportSheet(s, idx, { layout: layout.value, columns: +cols.value, zip: zip.checked, pad: +pad.value || 0, pow2: pow2.checked });
           else if (fmt.value === 'gif') await io.exportGIF(s, idx, loop.value);
           else if (fmt.value === 'apng') await io.exportAPNG(s, idx, loop.value);
+          else if (fmt.value === 'aseprite') await io.exportAseprite();
           else io.exportPxs();
         } catch (e) { console.error(e); toast('匯出失敗：' + e.message); return false; }
       },

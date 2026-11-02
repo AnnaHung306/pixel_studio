@@ -315,3 +315,58 @@ export function sheetGeometry(n, w, h, layout = 'horizontal', columns = 8, pad =
   if (pow2) { const up = (v) => { let p = 1; while (p < v) p *= 2; return p; }; width = up(width); height = up(height); }
   return { cols, rows, pad, width, height, cells };
 }
+
+// ---------- .aseprite writer (B77) ----------
+// meta: {width,height,layers:[{name,visible,opacity,blend}],frames:[{duration}],tags:[{name,from,to,direction}]}
+// getCel(layerIdx, frameIdx) -> RGBA Uint8ClampedArray | null. Format: github.com/aseprite/aseprite/blob/main/docs/ase-file-specs.md
+export async function encodeAseprite(meta, getCel) {
+  const W = meta.width, H = meta.height;
+  const enc = new TextEncoder();
+  const str = (s) => { const b = enc.encode(s); const o = new Uint8Array(2 + b.length); new DataView(o.buffer).setUint16(0, b.length, true); o.set(b, 2); return o; };
+  const cat = (arr) => { let n = 0; for (const a of arr) n += a.length; const o = new Uint8Array(n); let p = 0; for (const a of arr) { o.set(a, p); p += a.length; } return o; };
+  const mk = (type, body) => { const o = new Uint8Array(6 + body.length); const dv = new DataView(o.buffer); dv.setUint32(0, 6 + body.length, true); dv.setUint16(4, type, true); o.set(body, 6); return o; };
+  const frames = [];
+  for (let fi = 0; fi < meta.frames.length; fi++) {
+    const chunks = [];
+    if (fi === 0) {
+      meta.layers.forEach((L) => {
+        const b = new Uint8Array(16); const dv = new DataView(b.buffer);
+        dv.setUint16(0, L.visible ? 3 : 2, true); // visible | editable
+        dv.setUint16(2, 0, true); dv.setUint16(4, 0, true); dv.setUint16(6, 0, true); dv.setUint16(8, 0, true);
+        dv.setUint16(10, ['normal', 'multiply', 'screen', 'overlay'].indexOf(L.blend) < 0 ? 0 : ['normal', 'multiply', 'screen', 'overlay'].indexOf(L.blend), true);
+        b[12] = Math.max(0, Math.min(255, Math.round((L.opacity ?? 1) * 255)));
+        chunks.push(mk(0x2004, cat([b.subarray(0, 16), str(L.name || 'Layer')])));
+      });
+      if (meta.tags && meta.tags.length) {
+        const head = new Uint8Array(10); new DataView(head.buffer).setUint16(0, meta.tags.length, true);
+        const parts = [head];
+        for (const t of meta.tags) {
+          const b = new Uint8Array(17); const dv = new DataView(b.buffer);
+          dv.setUint16(0, t.from, true); dv.setUint16(2, t.to, true);
+          b[4] = t.direction === 'reverse' ? 1 : t.direction === 'pingpong' ? 2 : 0;
+          b[16] = 0;
+          parts.push(b.subarray(0, 17), str(t.name || 'tag'));
+        }
+        chunks.push(mk(0x2018, cat(parts)));
+      }
+    }
+    for (let li = 0; li < meta.layers.length; li++) {
+      const buf = getCel(li, fi); if (!buf) continue;
+      const z = await zlib(new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength));
+      const b = new Uint8Array(20); const dv = new DataView(b.buffer);
+      dv.setUint16(0, li, true); b[6] = 255; dv.setUint16(7, 2, true); dv.setUint16(16, W, true); dv.setUint16(18, H, true);
+      // header 16 bytes (layer,x,y,opacity,type,z,reserved) then w,h
+      const head = b.subarray(0, 16); const wh = new Uint8Array(4); new DataView(wh.buffer).setUint16(0, W, true); new DataView(wh.buffer).setUint16(2, H, true);
+      chunks.push(mk(0x2005, cat([head, wh, z])));
+    }
+    const body = cat(chunks); const fh = new Uint8Array(16); const dv = new DataView(fh.buffer);
+    dv.setUint32(0, 16 + body.length, true); dv.setUint16(4, 0xF1FA, true); dv.setUint16(6, Math.min(chunks.length, 65534), true);
+    dv.setUint16(8, Math.round(meta.frames[fi].duration), true); dv.setUint32(12, chunks.length, true);
+    frames.push(fh, body);
+  }
+  const all = cat(frames); const hd = new Uint8Array(128); const h = new DataView(hd.buffer);
+  h.setUint32(0, 128 + all.length, true); h.setUint16(4, 0xA5E0, true); h.setUint16(6, meta.frames.length, true);
+  h.setUint16(8, W, true); h.setUint16(10, H, true); h.setUint16(12, 32, true); h.setUint32(14, 1, true);
+  h.setUint16(18, 100, true); hd[28] = 0; h.setUint16(32, 0, true); hd[34] = 1; hd[35] = 1; h.setUint16(36, 16, true); h.setUint16(38, 16, true);
+  return new Blob([hd, all], { type: 'application/octet-stream' });
+}
