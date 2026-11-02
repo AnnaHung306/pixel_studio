@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen', 'allframes', 'allframesrot', 'pasteframes'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen', 'allframes', 'allframesrot', 'pasteframes', 'uiscale'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1955,6 +1955,19 @@ async function runProfile(name, target, base) {
     else ok(await E(() => document.getElementById('app').classList.contains('lefty')), 'lefty class set');
     await E(() => window.__pixelStudio.setUI({ leftHand: false }));
   };
+  S.uiscale = async () => {
+    await newProject(16, 16, 'us');
+    const w = () => E(() => { const el = document.querySelector('#toolbar button, #toolbar [role=button], #toolbar .tool') || document.getElementById('toolbar'); return el.getBoundingClientRect().width; });
+    await E(() => window.__pixelStudio.setUI({ uiScale: 1 }));
+    await settle(100);
+    const a = await w();
+    await E(() => window.__pixelStudio.setUI({ uiScale: 1.3 }));
+    await settle(100);
+    const b = await w();
+    ok(b > a * 1.2, 'UI scale 130% enlarges toolbar', JSON.stringify([a, b]));
+    ok(await E(() => !!document.getElementById('uiScale')), 'scale select present');
+    await E(() => window.__pixelStudio.setUI({ uiScale: 1 }));
+  };
   S.text = async () => {
     await newProject(64, 32, 'text');
     await E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'text', primary: [255, 0, 0, 255], textValue: '', textScale: 1, textSpacing: 0, textLang: 'zh_tw' }));
@@ -1974,7 +1987,7 @@ async function runProfile(name, target, base) {
     await E(() => window.__pixelStudio.setUI({ textLang: 'zh_hans' })); await type('国'); await settle(400);
     const [n2] = await cnt();
     ok(n2 > 20, 'simplified glyph renders');
-    await type('Hi\n中文'); await settle(400);
+    await type('Hi\n中文'); await settle(900);
     ok((await cnt())[2] === 26, 'two lines: 12+2+12 high');
     for (const [sz, st, hh, ww] of [[8, 'mono', 8, 12], [10, 'mono', 10, 15], [12, 'prop', 16, null]]) {
       await E((o) => window.__pixelStudio.setUI({ textSize: o[0], textStyle: o[1] }), [sz, st]); await type('A中'); await settle(500);

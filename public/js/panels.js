@@ -132,7 +132,7 @@ export function renderOptions() {
   } else if (t === 'hand') {
     add(h('button', { class: 'tb', onclick: fitView }, '符合視窗'));
   }
-  add(h('span', { class: 'spacer' }), tog('🤚 左手模式', 'leftHand', '介面左右對調：工具列移到右側、面板移到左側（寬螢幕）'), tog('✍️ 僅筆繪圖', 'penOnly', '防誤觸：開啟後手指只能平移 / 縮放，只有 Apple Pencil / 觸控筆可以繪圖'));
+  add(h('span', { class: 'spacer' }), (() => { const s = h('select', { id: 'uiScale', title: '介面縮放：放大工具列與面板（手指較大／視力需求）', onchange: () => setUI({ uiScale: +s.value }) }, [[0.9, '介面 90%'], [1, '介面 100%'], [1.15, '介面 115%'], [1.3, '介面 130%']].map(([v, l]) => h('option', { value: v, selected: (app.ui.uiScale || 1) === v }, l))); return h('label', {}, s); })(), tog('🤚 左手模式', 'leftHand', '介面左右對調：工具列移到右側、面板移到左側（寬螢幕）'), tog('✍️ 僅筆繪圖', 'penOnly', '防誤觸：開啟後手指只能平移 / 縮放，只有 Apple Pencil / 觸控筆可以繪圖'));
 }
 function selectionButtons() {
   const b = (label, fn, title) => h('button', { class: 'tb', onclick: fn, title: title || label }, label);
