@@ -7,7 +7,7 @@ import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelectio
 import { LANGS, SIZES, STYLES } from './core/pixelfont.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
-import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, usedPaletteColors, reversePalette, sortPaletteByUsage, moveColorToFront } from './core/palettes.js';
+import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, usedPaletteColors, reversePalette, sortPaletteByUsage, moveColorToFront, moveColorToEnd } from './core/palettes.js';
 import { fitView } from './view.js';
 
 // ---------- pixel icons ----------
@@ -275,6 +275,7 @@ function swatchMenu(el, hex) {
     { label: '以目前顏色取代', action: () => A.setPalette(app.doc.meta.palette.map((c) => (c === hex ? rgbaToHex(curColor()) : c)), '修改顏色') },
     { label: '命名顏色…', action: async () => { const v = await prompt('顏色名稱', (app.doc.meta.paletteNames || {})[hex] || '', hex); if (v !== null && v !== undefined) A.namePaletteColor(hex, v); } },
     { label: '移到調色盤最前面', action: () => { const cur = app.doc.meta.palette; const o = moveColorToFront(cur, hex); if (o.join() === cur.join()) return toast('已在最前面'); A.setPalette(o, '移到最前面'); } },
+    { label: '移到調色盤最後面', action: () => { const cur = app.doc.meta.palette; const o = moveColorToEnd(cur, hex); if (o.join() === cur.join()) return toast('已在最後面'); A.setPalette(o, '移到最後面'); } },
     { label: '從調色盤移除', action: () => A.removePaletteColor(hex) },
   ]);
 }

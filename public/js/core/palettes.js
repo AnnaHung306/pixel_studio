@@ -160,3 +160,10 @@ export function moveColorToFront(list, hex) {
   if (i <= 0) return list.slice();
   const o = list.slice(); const [c] = o.splice(i, 1); o.unshift(c); return o;
 }
+
+// 將指定顏色移到最後面（B84）；找不到則原樣
+export function moveColorToEnd(list, hex) {
+  const i = list.findIndex((h) => h.toLowerCase() === hex.toLowerCase());
+  if (i < 0 || i === list.length - 1) return list.slice();
+  const o = list.slice(); const [c] = o.splice(i, 1); o.push(c); return o;
+}
