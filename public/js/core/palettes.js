@@ -153,3 +153,10 @@ export function sortPaletteByUsage(list, cels) {
   }
   return list.map((h, i) => ({ h, i, n: cnt.get(h.toLowerCase()) || 0 })).sort((a, b) => b.n - a.n || a.i - b.i).map((o) => o.h);
 }
+
+// 將指定顏色移到最前面（B83）；找不到則原樣
+export function moveColorToFront(list, hex) {
+  const i = list.findIndex((h) => h.toLowerCase() === hex.toLowerCase());
+  if (i <= 0) return list.slice();
+  const o = list.slice(); const [c] = o.splice(i, 1); o.unshift(c); return o;
+}
