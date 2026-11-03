@@ -142,3 +142,14 @@ export function usedPaletteColors(list, cels) {
   }
   return list.filter((h) => used.has(h.toLowerCase()));
 }
+
+// 依使用頻率排序（B82）：用得多的在前，同頻率保持原順序（穩定）
+export function sortPaletteByUsage(list, cels) {
+  const cnt = new Map();
+  for (const b of cels) for (let i = 0; i < b.length; i += 4) {
+    if (!b[i + 3]) continue;
+    const k = '#' + [b[i], b[i + 1], b[i + 2], b[i + 3]].map((v) => v.toString(16).padStart(2, '0')).join('');
+    cnt.set(k, (cnt.get(k) || 0) + 1);
+  }
+  return list.map((h, i) => ({ h, i, n: cnt.get(h.toLowerCase()) || 0 })).sort((a, b) => b.n - a.n || a.i - b.i).map((o) => o.h);
+}

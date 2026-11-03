@@ -7,7 +7,7 @@ import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelectio
 import { LANGS, SIZES, STYLES } from './core/pixelfont.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
-import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, usedPaletteColors, reversePalette } from './core/palettes.js';
+import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, usedPaletteColors, reversePalette, sortPaletteByUsage } from './core/palettes.js';
 import { fitView } from './view.js';
 
 // ---------- pixel icons ----------
@@ -285,6 +285,7 @@ function paletteMenu(anchor) {
     { label: '以目前顏色加入色階（7 色，含色相偏移）', action: addRamp },
     { label: '依亮度排序調色盤', action: () => sortPal('lum') },
     { label: '依色相排序調色盤', action: () => sortPal('hue') },
+    { label: '依使用頻率排序調色盤', action: usagePal },
     { label: '反轉調色盤順序', action: reversePal },
     { label: '移除重複顏色', action: dedupePal },
     { label: '移除未使用的顏色', action: unusedPal },
@@ -310,6 +311,13 @@ function sortPal(mode) {
   if (out.join() === cur.join()) return toast('調色盤已是此順序');
   A.setPalette(out, mode === 'hue' ? '依色相排序' : '依亮度排序');
   toast(mode === 'hue' ? '已依色相排序' : '已依亮度排序');
+}
+function usagePal() {
+  const cur = app.doc.meta.palette;
+  const out = sortPaletteByUsage(cur, app.doc.cels.values());
+  if (out.join() === cur.join()) return toast('調色盤已是此順序');
+  A.setPalette(out, '依使用頻率排序');
+  toast('已依使用頻率排序');
 }
 function reversePal() {
   const cur = app.doc.meta.palette;
