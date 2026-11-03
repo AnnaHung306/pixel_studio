@@ -132,3 +132,13 @@ export function dedupePalette(list) {
 
 // 反轉調色盤順序（B56）
 export function reversePalette(list) { return list.slice().reverse(); }
+
+// 移除未使用的顏色（B81）：保留畫面（所有 cel）實際用到的調色盤顏色；不分大小寫
+export function usedPaletteColors(list, cels) {
+  const used = new Set();
+  for (const b of cels) for (let i = 0; i < b.length; i += 4) {
+    if (!b[i + 3]) continue;
+    used.add('#' + [b[i], b[i + 1], b[i + 2], b[i + 3]].map((v) => v.toString(16).padStart(2, '0')).join(''));
+  }
+  return list.filter((h) => used.has(h.toLowerCase()));
+}

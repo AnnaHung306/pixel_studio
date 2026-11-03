@@ -7,7 +7,7 @@ import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelectio
 import { LANGS, SIZES, STYLES } from './core/pixelfont.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
-import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, reversePalette } from './core/palettes.js';
+import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, usedPaletteColors, reversePalette } from './core/palettes.js';
 import { fitView } from './view.js';
 
 // ---------- pixel icons ----------
@@ -287,6 +287,7 @@ function paletteMenu(anchor) {
     { label: '依色相排序調色盤', action: () => sortPal('hue') },
     { label: '反轉調色盤順序', action: reversePal },
     { label: '移除重複顏色', action: dedupePal },
+    { label: '移除未使用的顏色', action: unusedPal },
     { label: '從畫面擷取所有顏色', action: extractPalette },
     { label: '匯入 .hex / .gpl…', action: importPalette },
     { label: '匯出 .hex', action: () => download(new Blob([paletteToHex(app.doc.meta.palette)], { type: 'text/plain' }), `${app.doc.meta.name}.hex`) },
@@ -322,6 +323,13 @@ function dedupePal() {
   if (out.length === cur.length) return toast('調色盤沒有重複顏色');
   A.setPalette(out, '移除重複顏色');
   toast(`已移除 ${cur.length - out.length} 個重複顏色`);
+}
+function unusedPal() {
+  const cur = app.doc.meta.palette;
+  const out = usedPaletteColors(cur, app.doc.cels.values());
+  if (out.length === cur.length) return toast('調色盤顏色都有使用');
+  A.setPalette(out, '移除未使用的顏色');
+  toast(`已移除 ${cur.length - out.length} 個未使用顏色`);
 }
 function addRamp() {
   const ramp = makeRamp(rgbaToHex(curColor()).slice(0, 7), 7);
