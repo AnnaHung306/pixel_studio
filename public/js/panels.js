@@ -107,13 +107,15 @@ export function renderOptions() {
     if (t === 'move') add(tog('🔗 連動所有圖層', 'linkMove', '移動時同時移動此影格所有可見且未鎖定的圖層'));
   } else if (t === 'text') {
     const u = app.ui;
+    if (!u.textValue) { try { u.textValue = localStorage.getItem('ps.textDraft') || ''; } catch {} }
+    const saveDraft = () => { try { localStorage.setItem('ps.textDraft', u.textValue || ''); } catch {} };
     const ta = h('textarea', { id: 'textInput', rows: 2, placeholder: '輸入文字（繁／簡／English），先點畫布選位置', 'aria-label': '文字內容', spellcheck: false, autocapitalize: 'off', value: u.textValue || '' });
     ta.value = u.textValue || '';
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && !e.isComposing) { e.preventDefault(); document.getElementById('textDone')?.click(); } });
     let composing = false; // IME (注音/拼音): don't re-render the preview for half-typed syllables
     ta.addEventListener('compositionstart', () => { composing = true; });
-    ta.addEventListener('compositionend', () => { composing = false; u.textValue = ta.value; updateText(); });
-    ta.addEventListener('input', (e) => { u.textValue = ta.value; if (composing || e.isComposing) return; updateText(); });
+    ta.addEventListener('compositionend', () => { composing = false; u.textValue = ta.value; saveDraft(); updateText(); });
+    ta.addEventListener('input', (e) => { u.textValue = ta.value; saveDraft(); if (composing || e.isComposing) return; updateText(); });
     const sel = (id, title, opts, key, num) => { const s = h('select', { id, title, onchange: () => { u[key] = num ? +s.value : s.value; setUI({}); updateText(); } }, opts.map(([v, l]) => h('option', { value: v, selected: String(u[key] ?? opts[0][0]) === String(v) }, l))); return h('label', {}, s); };
     add(ta,
       sel('textLang', '語言字形：繁體（台灣）／簡體', LANGS.map((l) => [l.id, l.label]), 'textLang'),
@@ -127,7 +129,7 @@ export function renderOptions() {
       sel('textEffect', '文字效果：外框／陰影使用副色', [['none', '無效果'], ['outline', '外框'], ['shadow', '陰影']], 'textEffect'),
       h('button', { class: 'tb', id: 'textConv', onclick: () => converterDialog(), title: '向量→像素轉換器：把系統字型轉成像素字，可預覽並手修' }, '🔤 轉換器'),
       h('button', { class: 'tb', id: 'textDict', onclick: () => dictionaryDialog(), title: '字形字典：自訂字形，打字時優先使用' }, '📖 字典'),
-      h('button', { class: 'tb on', id: 'textDone', onclick: () => { if (app.floating?.label === '文字') { dropFloating(); u.textValue = ''; setUI({}); } }, title: '把文字寫入圖層（可復原）' }, '✓ 放置'),
+      h('button', { class: 'tb on', id: 'textDone', onclick: () => { if (app.floating?.label === '文字') { dropFloating(); u.textValue = ''; saveDraft(); setUI({}); } }, title: '把文字寫入圖層（可復原）' }, '✓ 放置'),
       h('span', { class: 'small' }, '點畫布設定位置；預覽可拖曳。字型：Fusion Pixel 8／10／12px (OFL)'));
   } else if (t === 'hand') {
     add(h('button', { class: 'tb', onclick: fitView }, '符合視窗'));

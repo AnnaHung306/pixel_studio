@@ -2022,6 +2022,7 @@ async function runProfile(name, target, base) {
   };
   S.textime = async () => {
     await newProject(64, 32, 'textime');
+    await E(() => { try { localStorage.removeItem('ps.textDraft'); } catch {} });
     await E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'text', primary: [255, 0, 0, 255], textValue: '', textScale: 1, textSpacing: 0, textLang: 'zh_tw', textSize: 12, textStyle: 'mono', textEffect: 'none', textVertical: 'h', textAlign: 'left' }));
     for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textInput'))); i++) await settle(100);
     await stroke([[2, 2]], 'pen');
@@ -2035,6 +2036,7 @@ async function runProfile(name, target, base) {
     await E(() => { const t = document.getElementById('textInput'); t.value = '中文'; t.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '文' })); });
     await settle(400);
     ok((await w()) === 24, 'plain (non-IME) input still updates live');
+    ok((await E(() => localStorage.getItem('ps.textDraft'))) === '中文', 'text draft persisted to localStorage (B87)');
     await E(() => window.__pixelStudio.setUI({ tool: 'pencil', textValue: '' }));
   };
   S.textoffline = async () => {
