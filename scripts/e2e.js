@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen', 'allframes', 'allframesrot', 'pasteframes', 'uiscale'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen', 'allframes', 'allframesrot', 'pasteframes', 'uiscale', 'textflush'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1967,6 +1967,20 @@ async function runProfile(name, target, base) {
     ok(b > a * 1.2, 'UI scale 130% enlarges toolbar', JSON.stringify([a, b]));
     ok(await E(() => !!document.getElementById('uiScale')), 'scale select present');
     await E(() => window.__pixelStudio.setUI({ uiScale: 1 }));
+  };
+  S.textflush = async () => {
+    await newProject(64, 32, 'tf');
+    await E(() => window.__pixelStudio.setUI({ penOnly: false, tool: 'text', primary: [255, 0, 0, 255], textValue: '', textScale: 1, textSpacing: 0, textLang: 'zh_tw' }));
+    for (let i = 0; i < 30 && !(await E(() => !!document.getElementById('textInput'))); i++) await settle(100);
+    await stroke([[2, 2]], 'pen');
+    await E(() => { const t = document.getElementById('textInput'); t.value = 'Hi'; t.dispatchEvent(new Event('input', { bubbles: true })); });
+    await settle(500);
+    ok(await E(() => window.__pixelStudio.app.floating?.label === '文字'), 'pending text floats');
+    await E(() => window.dispatchEvent(new Event('pagehide')));
+    await settle(200);
+    ok(await E(() => !window.__pixelStudio.app.floating), 'pagehide places pending text');
+    const n = await E(() => { const b = window.__pixelStudio.app.doc.cels.values().next().value; let c = 0; for (let i = 3; i < b.length; i += 4) if (b[i]) c++; return c; });
+    ok(n > 5, 'text pixels committed to layer', String(n));
   };
   S.text = async () => {
     await newProject(64, 32, 'text');

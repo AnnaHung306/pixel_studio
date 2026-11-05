@@ -100,8 +100,10 @@ function buildSaveBanner() {
   document.body.append(live);
 }
 on('dirty', markDirty);
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && saveTimer) saveNow(); });
-window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); });
+// B87: pending (unplaced) text is written to the layer when the page is hidden/closed so it isn't lost
+function flushPendingText() { if (app.floating && app.floating.label === '文字') { T.dropFloating(); } }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { flushPendingText(); if (saveTimer) saveNow(); } });
+window.addEventListener('pagehide', () => { flushPendingText(); if (saveTimer) saveNow(); });
 window.addEventListener('beforeunload', (e) => { if (save.state === 'error' || save.state === 'dirty' || save.state === 'saving') { if (saveTimer) saveNow(); e.preventDefault(); e.returnValue = ''; } });
 
 function thumbnail() {
