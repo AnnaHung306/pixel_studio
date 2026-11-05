@@ -14,3 +14,9 @@ test('pressureSizeFor: dead zone keeps light touches at size 1 and rescales the 
   assert.ok(pressureSizeFor(0.65, 9, 0.3) > 1);
   assert.equal(pressureSizeFor(0.5, 9, undefined), 5);
 });
+test('pressureSizeFor: curve soft raises, hard lowers mid pressure', () => {
+  assert.equal(pressureSizeFor(0.25, 9, 0, 'soft'), 5);
+  assert.equal(pressureSizeFor(0.5, 9, 0, 'hard'), 3);
+  assert.equal(pressureSizeFor(1, 9, 0, 'hard'), 9);
+  assert.equal(pressureSizeFor(0.5, 9, 0, ''), 5);
+});

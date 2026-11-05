@@ -80,6 +80,7 @@ export function renderOptions() {
   const sym = () => h('span', { class: 'grp' }, tog('⇆ 對稱', 'symX', '左右對稱（水平對稱）'), tog('⇅ 對稱', 'symY', '上下對稱（垂直對稱）'));
   if (t === 'pencil' || t === 'eraser') {
     add(sizeCtl(), shapeCtl(), tog('✎ 壓感', 'pressure', 'Apple Pencil 壓力控制筆刷大小（1 ～ 筆刷大小）'));
+    if (app.ui.pressure) add(h('label', {}, '曲線', (() => { const s = h('select', { id: 'pressureCurve', onchange: () => setUI({ pressureCurve: s.value }), title: '壓力曲線：柔軟＝輕壓即變粗；偏硬＝需用力才變粗' }, [['', '線性'], ['soft', '柔軟'], ['hard', '偏硬']].map(([v, l]) => h('option', { value: v, selected: (app.ui.pressureCurve || '') === v }, l))); return s; })()));
     if (app.ui.pressure) add(h('label', {}, '門檻', (() => { const s = h('select', { id: 'pressureMin', onchange: () => setUI({ pressureMin: +s.value }), title: '壓力門檻：低於此壓力一律用最小筆刷（防手掌輕觸）' }, [[0, '無'], [0.1, '10%'], [0.2, '20%'], [0.3, '30%']].map(([v, l]) => h('option', { value: v, selected: (app.ui.pressureMin || 0) === v }, l))); return s; })()));
     if (t === 'pencil') add(tog('像素完美', 'pixelPerfect', '去除 L 形轉角（1px 筆刷時有效）'));
     add(dither(), sym(), tog('🔒 鎖定調色盤', 'paletteLock', '只用調色盤顏色：繪圖色自動吸附到最近的調色盤顏色'));
