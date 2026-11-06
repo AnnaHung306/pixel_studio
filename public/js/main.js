@@ -452,6 +452,7 @@ function onKey(e) {
     if (k === 'y' || (k === 'z' && e.shiftKey)) { done(); redo(); return; }
     if (k === 'c') { done(); T.copySelection(); return; }
     if (k === 'x') { done(); T.cutSelection(); return; }
+    if (k === 'j') { done(); A.selectionToNewLayer(e.shiftKey); return; }
     if (k === 'v') { pasteHandled = false; setTimeout(() => { if (!pasteHandled) T.pasteClip(); }, 80); return; }
     if (k === 'a') { done(); T.selectAll(); return; }
     if (k === 'd') { done(); T.deselect(); return; }

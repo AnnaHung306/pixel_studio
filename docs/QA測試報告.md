@@ -6,6 +6,25 @@
 
 <!-- latest -->
 
+## v1.76.0（2026-11-06，迭代 86）
+
+smoke 54/54；e2e 18 組 9887 項通過、0 失敗；單元測試 smoke、npm test 通過。
+
+| 裝置設定 | 引擎 | 伺服器 | 純靜態 dist/ |
+|---|---|---|---|
+| iPad Pro 11 橫向 | webkit 27.2 | 555 ✅ | 536 ✅ |
+| iPad Pro 11 直向 | webkit 27.2 | 555 ✅ | 536 ✅ |
+| iPad（第 7 代）橫向 | webkit 27.2 | 555 ✅ | 536 ✅ |
+| iPad（第 7 代）直向 | webkit 27.2 | 555 ✅ | 536 ✅ |
+| iPad mini 橫向 | webkit 27.2 | 555 ✅ | 536 ✅ |
+| iPad mini 直向 | webkit 27.2 | 555 ✅ | 536 ✅ |
+| iPhone 14 直向 | webkit 27.2 | 571 ✅ | 552 ✅ |
+| iPhone 14 橫向 | webkit 27.2 | 571 ✅ | 552 ✅ |
+| 桌面 1920×1080 | chromium 156.0.8078.4 | 557 ✅ | 538 ✅ |
+
+e2e sel2layer。
+
+
 ## v1.75.0（2026-11-06，迭代 85）
 
 smoke 54/54；e2e 18 組 9743 項通過、0 失敗；單元測試 smoke、npm test 通過（見 smoke.log）。

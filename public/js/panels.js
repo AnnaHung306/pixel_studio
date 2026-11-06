@@ -141,7 +141,7 @@ function selectionButtons() {
   const b = (label, fn, title) => h('button', { class: 'tb', onclick: fn, title: title || label }, label);
   return [
     b('全選', selectAll, 'Ctrl+A'), b('取消', deselect, 'Ctrl+D'), b('反選', invertSelection, 'Ctrl+Shift+I'),
-    b('複製', copySelection, 'Ctrl+C'), b('剪下', cutSelection, 'Ctrl+X'), b('貼上', () => pasteClip(), 'Ctrl+V'), b('貼到選取影格', () => pasteClipToFrames(), '直接貼到時間軸選取（Shift 點選）的影格範圍；未選取則貼到目前影格'), b('刪除', () => deleteSelection(), 'Delete'),
+    b('複製', copySelection, 'Ctrl+C'), b('剪下', cutSelection, 'Ctrl+X'), b('貼上', () => pasteClip(), 'Ctrl+V'), b('貼到選取影格', () => pasteClipToFrames(), '直接貼到時間軸選取（Shift 點選）的影格範圍；未選取則貼到目前影格'), b('刪除', () => deleteSelection(), 'Delete'), b('複製→新圖層', () => A.selectionToNewLayer(false), 'Ctrl+J：把選取內容複製到新圖層'), b('剪下→新圖層', () => A.selectionToNewLayer(true), 'Ctrl+Shift+J'),
     b('⇆ 翻轉', () => transformSelection('flipH'), '水平翻轉 (Shift+H)'), b('⇅ 翻轉', () => transformSelection('flipV'), '垂直翻轉 (Shift+V)'),
     b('↻ 90°', () => transformSelection('rotCW')), b('↺ 90°', () => transformSelection('rotCCW')),
     b('⇆ 全影格', () => transformSelectionAllFrames('flipH'), '水平翻轉：套用到此圖層所有影格'), b('⇅ 全影格', () => transformSelectionAllFrames('flipV'), '垂直翻轉：套用到此圖層所有影格'),

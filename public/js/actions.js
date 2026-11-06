@@ -37,6 +37,31 @@ export function duplicateLayer() {
     app.ui.layerId = L.id;
   });
 }
+export function selectionToNewLayer(cut = false) {
+  if (app.floating) dropFloating();
+  const sel = app.selection;
+  const cel = app.doc.cels.get(activeKey());
+  if (!sel || !cel) return toast('請先在有內容的圖層上建立選取');
+  const Wd = W(), Ht = H();
+  const out = createBuffer(Wd, Ht), rest = cut ? cel.slice() : null;
+  let n = 0;
+  for (let i = 0; i < sel.mask.length; i++) {
+    if (!sel.mask[i] || !cel[i * 4 + 3]) continue;
+    out.set(cel.subarray(i * 4, i * 4 + 4), i * 4); n++;
+    if (rest) rest[i * 4] = rest[i * 4 + 1] = rest[i * 4 + 2] = rest[i * 4 + 3] = 0;
+  }
+  if (!n) return toast('選取範圍內沒有像素');
+  const srcKey = activeKey();
+  commit(cut ? '剪下到新圖層' : '複製到新圖層', () => {
+    const m = app.doc.meta;
+    const L = { id: uid('L'), name: `圖層 ${m.layers.length + 1}`, visible: true, locked: false, opacity: 1, blend: 'normal' };
+    m.layers.splice(layerIndex() + 1, 0, L);
+    setCel(celKey(L.id, m.frames[app.ui.frame].id), out);
+    if (rest) setCel(srcKey, rest);
+    app.ui.layerId = L.id;
+  });
+  toast(cut ? '已剪下到新圖層' : '已複製到新圖層');
+}
 export function deleteLayer() {
   const m = app.doc.meta;
   if (m.layers.length <= 1) return toast('至少要保留一個圖層');
