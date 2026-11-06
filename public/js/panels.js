@@ -279,6 +279,7 @@ function swatchMenu(el, hex) {
     { label: '命名顏色…', action: async () => { const v = await prompt('顏色名稱', (app.doc.meta.paletteNames || {})[hex] || '', hex); if (v !== null && v !== undefined) A.namePaletteColor(hex, v); } },
     { label: '移到調色盤最前面', action: () => { const cur = app.doc.meta.palette; const o = moveColorToFront(cur, hex); if (o.join() === cur.join()) return toast('已在最前面'); A.setPalette(o, '移到最前面'); } },
     { label: '移到調色盤最後面', action: () => { const cur = app.doc.meta.palette; const o = moveColorToEnd(cur, hex); if (o.join() === cur.join()) return toast('已在最後面'); A.setPalette(o, '移到最後面'); } },
+    { label: '以此色加入色階（插在後面）', action: () => { const cur = app.doc.meta.palette; const have = new Set(cur); const add = makeRamp(hex.slice(0, 7), 7).filter((c) => !have.has(c)); if (!add.length) return toast('色階已在調色盤中'); const i = cur.indexOf(hex) + 1; A.setPalette([...cur.slice(0, i), ...add, ...cur.slice(i)], '加入色階'); toast(`已加入 ${add.length} 個色階顏色`); } },
     { label: '複製色碼', action: async () => { try { await navigator.clipboard.writeText(hex.toUpperCase()); toast('已複製 ' + hex.toUpperCase()); } catch (e) { toast('無法複製，色碼：' + hex.toUpperCase()); } } },
     { label: '從調色盤移除', action: () => A.removePaletteColor(hex) },
   ]);
