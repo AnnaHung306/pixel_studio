@@ -268,7 +268,12 @@ function bindTopbar() {
   $('btn-focus').onclick = () => toggleFocus();
   const oneShot = (id) => setUI({ oneShot: app.ui.oneShot === id ? null : id });
   $('qt-pick').onclick = () => oneShot('eyedropper');
-  $('qt-erase').onclick = () => oneShot('eraser');
+  { // B92: long-press eraser button = switch eraser tool persistently
+    const be = $('qt-erase'); let lt = null, fired = false;
+    be.addEventListener('pointerdown', () => { fired = false; clearTimeout(lt); lt = setTimeout(() => { fired = true; setUI({ tool: 'eraser', oneShot: null }); toast('已切換橡皮擦工具'); }, 550); });
+    for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) be.addEventListener(ev, () => clearTimeout(lt));
+    be.onclick = () => { if (fired) { fired = false; return; } oneShot('eraser'); };
+  }
   on('ui', () => { for (const [b, t] of [['qt-pick', 'eyedropper'], ['qt-erase', 'eraser']]) { const el = $(b); el.classList.toggle('on', app.ui.oneShot === t); el.setAttribute('aria-pressed', String(app.ui.oneShot === t)); } });
   const qpal = $('qpal');
   const renderQpal = () => {

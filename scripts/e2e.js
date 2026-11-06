@@ -40,7 +40,7 @@ export const PROFILES = {
   'iphone-14-landscape': apple('iPhone 14 landscape', { phone: true }),
   'desktop-chromium': { browser: 'chromium', ctx: { viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 }, touch: false },
 };
-const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen', 'allframes', 'allframesrot', 'pasteframes', 'uiscale', 'textflush', 'sel2layer', 'loupe'];
+const SUITES = ['boot', 'layout', 'a11y', 'draw', 'select', 'palette', 'layers', 'timeline', 'view', 'history', 'memory', 'refs', 'canvas', 'export', 'import', 'persist', 'savestate', 'notices', 'pwa', 'cloud', 'keyboard', 'diag', 'focus', 'quick', 'taps', 'isoline', 'longpress', 'tile', 'pressure', 'shadeink', 'palettelock', 'palconvert', 'invert', 'grayhue', 'custombrush', 'outline', 'lefthand', 'brightness', 'contrast', 'saturation', 'pvmark', 'linkmove', 'colorrevert', 'wrapmove', 'alphalock', 'tapgest', 'gradfill', 'palname', 'palsort', 'penbadge', 'text', 'conv', 'dict', 'textime', 'textoffline', 'graypv', 'sharpen', 'allframes', 'allframesrot', 'pasteframes', 'uiscale', 'textflush', 'sel2layer', 'loupe', 'qterase'];
 
 const args = Object.fromEntries(process.argv.slice(2).map((a) => { const [k, v] = a.replace(/^--/, '').split('='); return [k, v ?? true]; }));
 if (args.list) { console.log('profiles:', Object.keys(PROFILES).join(' ')); console.log('suites:', SUITES.join(' ')); process.exit(0); }
@@ -1848,6 +1848,24 @@ async function runProfile(name, target, base) {
     await E(() => window.__lq('pointerdown'));
     ok(await E(() => document.getElementById('loupe').hidden), 'no loupe for pencil');
     await E(() => window.__lq('pointerup'));
+  };
+  S.qterase = async () => {
+    await newProject(16, 16, 'qterase');
+    await tool('pencil');
+    await E(() => {
+      const b = document.getElementById('qt-erase');
+      const o = { pointerId: 5, pointerType: 'touch', isPrimary: true, bubbles: true };
+      b.dispatchEvent(new PointerEvent('pointerdown', o));
+      window.__qtb = b; window.__qto = o;
+    });
+    await new Promise((r) => setTimeout(r, 800));
+    await E(() => { window.__qtb.dispatchEvent(new PointerEvent('pointerup', window.__qto)); window.__qtb.click(); });
+    ok(await ui('tool') === 'eraser', 'long-press switches to eraser tool');
+    ok(await ui('oneShot') == null, 'no one-shot armed after long-press');
+    await tool('pencil');
+    await tap('#qt-erase');
+    ok(await ui('oneShot') === 'eraser', 'short tap still arms one-shot');
+    await tap('#qt-erase');
   };
   S.allframesrot = async () => {
     await newProject(16, 16, 'afr');
