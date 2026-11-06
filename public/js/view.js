@@ -301,6 +301,31 @@ function onDown(e) {
   app.busy = true;
   tools.down(screenToDoc(p.sx, p.sy), info(e));
   armLongPress(e, p);
+  if (e.pointerType !== 'mouse') loupeShow(p);
+}
+
+// Loupe (B91): while the eyedropper is held with finger/pen, show a magnified 9x9 view above the contact point.
+let loupeEl = null, loupeCv = null;
+function loupeHide() { if (loupeEl) loupeEl.hidden = true; }
+function loupeShow(p) {
+  if (app.ui.tool !== 'eyedropper' || mode !== 'draw') return loupeHide();
+  if (!loupeEl) {
+    loupeEl = document.createElement('div'); loupeEl.id = 'loupe'; loupeEl.setAttribute('aria-hidden', 'true');
+    loupeEl.style.cssText = 'position:absolute;width:108px;height:108px;border:3px solid #fff;border-radius:50%;box-shadow:0 0 0 1px #000,0 4px 12px #0008;overflow:hidden;pointer-events:none;z-index:50;background:#222';
+    loupeCv = document.createElement('canvas'); loupeCv.width = loupeCv.height = 9; loupeCv.style.cssText = 'width:100%;height:100%;image-rendering:pixelated';
+    const dot = document.createElement('div'); dot.style.cssText = 'position:absolute;left:48px;top:48px;width:12px;height:12px;border:2px solid #000;outline:1px solid #fff;box-sizing:border-box';
+    loupeEl.append(loupeCv, dot); stage.appendChild(loupeEl);
+  }
+  const d = screenToDoc(p.sx, p.sy), cx = Math.floor(d.x), cy = Math.floor(d.y);
+  const g = loupeCv.getContext('2d'); g.clearRect(0, 0, 9, 9);
+  const src = docCanvas;
+  g.imageSmoothingEnabled = false;
+  try { g.drawImage(src, cx - 4, cy - 4, 9, 9, 0, 0, 9, 9); } catch (_) { /* ignore */ }
+  const r = stage.getBoundingClientRect(), cr = canvas.getBoundingClientRect();
+  let lx = p.sx + (cr.left - r.left) - 54, ly = p.sy + (cr.top - r.top) - 150;
+  if (ly < 4) ly = p.sy + (cr.top - r.top) + 40;
+  loupeEl.style.left = Math.max(4, Math.min(r.width - 112, lx)) + 'px'; loupeEl.style.top = ly + 'px';
+  loupeEl.hidden = false;
 }
 
 // Long-press (finger / Pencil held still ~0.6s while drawing) = one-shot eyedropper, like Procreate.
@@ -353,11 +378,12 @@ function onMove(e) {
       const q = local(ce);
       tools.move(screenToDoc(q.sx, q.sy), info(ce));
     }
+    if (e.pointerType !== 'mouse') loupeShow(p);
   }
 }
 
 function onUp(e) {
-  clearLongPress();
+  clearLongPress(); loupeHide();
   const ptr = pointers.get(e.pointerId);
   pointers.delete(e.pointerId);
   const p = local(e);
@@ -387,7 +413,7 @@ function onUp(e) {
   if (ptr && ptr.type === 'touch' && tapInfo && pinch && pointers.size > 0) tapInfo.count = Math.max(tapInfo.count, pinch.count);
 }
 function onCancel(e) {
-  clearLongPress();
+  clearLongPress(); loupeHide();
   pointers.delete(e.pointerId);
   if (mode === 'draw') {
     // Apple Pencil: a system gesture / palm event can cancel the pointer mid-stroke. Keep what was drawn
