@@ -167,3 +167,7 @@ export function moveColorToEnd(list, hex) {
   if (i < 0 || i === list.length - 1) return list.slice();
   const o = list.slice(); const [c] = o.splice(i, 1); o.push(c); return o;
 }
+
+export function paletteToCopyText(list) {
+  return (list || []).map((h) => String(h).toUpperCase()).join(' ');
+}

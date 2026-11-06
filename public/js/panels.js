@@ -7,7 +7,7 @@ import { TOOLS, selectAll, deselect, invertSelection, copySelection, cutSelectio
 import { LANGS, SIZES, STYLES } from './core/pixelfont.js';
 import * as A from './actions.js';
 import { hexToRgba, rgbaToHex } from './core/raster.js';
-import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, usedPaletteColors, reversePalette, sortPaletteByUsage, moveColorToFront, moveColorToEnd } from './core/palettes.js';
+import { PALETTES, parsePaletteFile, parsePaletteNames, paletteToHex, paletteToGpl, makeRamp, shadeStep, sortPalette, dedupePalette, usedPaletteColors, reversePalette, sortPaletteByUsage, moveColorToFront, moveColorToEnd, paletteToCopyText } from './core/palettes.js';
 import { fitView } from './view.js';
 
 // ---------- pixel icons ----------
@@ -297,6 +297,7 @@ function paletteMenu(anchor) {
     { label: '移除未使用的顏色', action: unusedPal },
     { label: '從畫面擷取所有顏色', action: extractPalette },
     { label: '匯入 .hex / .gpl…', action: importPalette },
+    { label: '複製所有色碼', action: async () => { const t = paletteToCopyText(app.doc.meta.palette); if (!t) return toast('調色盤是空的'); try { await navigator.clipboard.writeText(t); toast('已複製 ' + app.doc.meta.palette.length + ' 個色碼'); } catch (e) { toast('無法複製'); } } },
     { label: '匯出 .hex', action: () => download(new Blob([paletteToHex(app.doc.meta.palette)], { type: 'text/plain' }), `${app.doc.meta.name}.hex`) },
     { label: '匯出 .gpl（GIMP / Aseprite）', action: () => download(new Blob([paletteToGpl(app.doc.meta.palette, app.doc.meta.name, app.doc.meta.paletteNames)], { type: 'text/plain' }), `${app.doc.meta.name}.gpl`) },
     { label: '清空調色盤', action: () => A.setPalette([], '清空調色盤') },
